@@ -5,6 +5,7 @@ export REPORT_GENERATOR_PATH=${scriptDir}/../
 source $REPORT_GENERATOR_PATH/set_pythonpath.sh
 
 LATEX_TEMPLATE=${REPORT_GENERATOR_PATH}/latex/templates/simple_report.template
+OUTPUT_REPORTS_FOLDER=$REPORT_GENERATOR_PATH/REPORTS
 
 if [[ -z ${1} ]];
 then
@@ -14,8 +15,8 @@ fi
 
 
 echo "Generating report for experiment $1"
-mkdir -p $REPORT_GENERATOR_PATH/pandoc_reports/$1
-cd $REPORT_GENERATOR_PATH/pandoc_reports/$1
+mkdir -p ${OUTPUT_REPORTS_FOLDER}/$1
+cd ${OUTPUT_REPORTS_FOLDER}/$1
 python3 ${REPORT_GENERATOR_PATH}/src/report_generator.py $1 > $1.txt
 if [[ $? -eq 0 ]]
 then

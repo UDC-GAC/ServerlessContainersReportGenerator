@@ -1,4 +1,4 @@
-/pandoc_reports/*
+/REPORTS/*
 .pyc
 **/__pycache__/**
 .idea/
