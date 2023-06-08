@@ -81,7 +81,7 @@ class DatabaseConfig:
 class OpenTSDBConfig(DatabaseConfig):
     def __init__(self):
         params = ConfigParams()
-        params.config_path = "../../conf/timeseries_config.ini"
+        params.config_path = "../../conf/data-retrieval/timeseries_config.ini"
         params.config_keys = [
             "OPENTSDB_IP",
             "OPENTSDB_PORT",
@@ -108,7 +108,7 @@ class MongoDBConfig(DatabaseConfig):
 
     def __init__(self):
         params = ConfigParams()
-        params.config_path = "../../conf/timestamping_config.ini"
+        params.config_path = "../../conf/data-retrieval/timestamping_config.ini"
         params.config_keys = [
             "TESTS_POST_ENDPOINT",
             "EXPERIMENTS_POST_ENDPOINT",
