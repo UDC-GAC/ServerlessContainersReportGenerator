@@ -7,8 +7,8 @@
       "host_rescaler_port": "8000",
       "resources": {
         "cpu": {
-          "max": 400,
-          "free": 400
+          "max": 800,
+          "free": 800
         },
         "mem": {
           "max": 8192,
@@ -22,25 +22,7 @@
       "name": "host0-cont0",
       "resources": {
         "cpu": {
-          "max": 200,
-          "current": 200,
-          "min": 20,
-          "boundary": 20
-        },
-        "mem": {
-          "max": 4192,
-          "current": 2048,
-          "min": 256,
-          "boundary": 128
-        }
-      },
-      "host": "host0"
-    },
-    {
-      "name": "host0-cont1",
-      "resources": {
-        "cpu": {
-          "max": 200,
+          "max": 800,
           "current": 200,
           "min": 20,
           "boundary": 20
@@ -60,12 +42,12 @@
       "name": "app0",
       "resources": {
         "cpu": {
-          "max": 400,
+          "max": 800,
           "min": 40,
           "boundary": 40
         },
         "mem": {
-          "max": 4096,
+          "max": 8192,
           "min": 512,
           "boundary": 128
         }
@@ -76,31 +58,7 @@
       "stop_script": "",
       "app_jar": "",
       "containers": [
-        "host0-cont0",
-        "host0-cont1"
-      ]
-    },{
-      "name": "app1",
-      "resources": {
-        "cpu": {
-          "max": 400,
-          "min": 40,
-          "boundary": 40
-        },
-        "mem": {
-          "max": 4096,
-          "min": 512,
-          "boundary": 128
-        }
-      },
-      "files_dir": "",
-      "install_script": "",
-      "start_script": "",
-      "stop_script": "",
-      "app_jar": "",
-      "containers": [
-        "host0-cont2",
-        "host0-cont3"
+        "host0-cont0"
       ]
     }
   ],
@@ -109,11 +67,6 @@
       "name": "user0",
       "applications": [
         "app0"
-      ]
-    },{
-      "name": "user1",
-      "applications": [
-        "app1"
       ]
     }
   ]

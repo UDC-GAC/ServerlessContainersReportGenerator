@@ -3,19 +3,9 @@
 scriptDir=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 source ${scriptDir}/../../set_pythonpath.sh
 export ORCHESTRATOR_PATH=${SERVERLESS_PATH}/scripts/orchestrator
+export LAYOUT_FILE=${scriptDir}/../layout.json
 
-#hosts=$(jq -c '.hosts[]' ${scriptDir}/layout.json)
-#while read -r host; do
-#    name=$(echo $host | jq -r '.name')
-#    containers=$(echo $host | jq -c '.containers[]' | tr -d '"')
-#    while read -r container; do
-#        echo "Subscribing container $container of host $name"
-#        bash $ORCHESTRATOR_PATH/Structures/subscribe_container.sh $container $name
-#    done <<< "$containers"
-#done <<< "$hosts"
-
-
-jq -c '.containers[]' ${scriptDir}/layout.json | while read c; do
+jq -c '.containers[]' ${LAYOUT_FILE} | while read c; do
     echo "Subscribing container: $(echo ${c} | jq -c '.name')"
     bash $ORCHESTRATOR_PATH/Structures/subscribe_container.sh ${c}
 done

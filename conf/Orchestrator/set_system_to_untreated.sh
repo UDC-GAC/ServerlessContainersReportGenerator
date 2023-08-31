@@ -3,9 +3,10 @@
 scriptDir=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 source ${scriptDir}/../../set_pythonpath.sh
 export ORCHESTRATOR_PATH=${SERVERLESS_PATH}/scripts/orchestrator
+export LAYOUT_FILE=${scriptDir}/../layout.json
 
-apps=($(jq -r '.apps[].name' ${scriptDir}/layout.json))
-containers=$(jq -c '.containers[].name' ${scriptDir}/layout.json | tr -d '"')
+apps=($(jq -r '.apps[].name' ${LAYOUT_FILE}))
+containers=$(jq -c '.containers[].name' ${LAYOUT_FILE} | tr -d '"')
 resources=( cpu mem )
 
 echo "Setting container resources to unguarded"

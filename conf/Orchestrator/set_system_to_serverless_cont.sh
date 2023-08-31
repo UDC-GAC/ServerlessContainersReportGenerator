@@ -3,8 +3,9 @@
 scriptDir=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
 source ${scriptDir}/../../set_pythonpath.sh
 export ORCHESTRATOR_PATH=${SERVERLESS_PATH}/scripts/orchestrator
+export LAYOUT_FILE=${scriptDir}/../layout.json
 
-containers=$(jq -c '.containers[].name' ${scriptDir}/layout.json | tr -d '"')
+containers=$(jq -c '.containers[].name' ${LAYOUT_FILE} | tr -d '"')
 resources=( cpu mem )
 
 echo "Deactivate the Guardian, Scaler and Rebalancer service"
