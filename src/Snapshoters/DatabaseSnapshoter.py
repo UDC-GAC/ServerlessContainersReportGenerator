@@ -91,10 +91,26 @@ def get_users():
     docs = list()
     # Remote database operation
     for user in db_handler.get_users():
+        print(user)
         timestamp = int(time.time())
+        # Energy metrics
         for submetric in ["used", "max", "usage", "current"]:
+            if submetric not in user["energy"]:
+                log_warning("For user {0} metric user.energy.{1} is unavailable".format(user["name"], submetric), debug)
+                continue
             timeseries = dict(metric="user.energy.{0}".format(submetric),
                               value=user["energy"][submetric],
+                              timestamp=timestamp,
+                              tags={"user": user["name"]})
+            docs.append(timeseries)
+
+        # Accounting metrics
+        for submetric in ["coins", "consumed", "credit"]:
+            if submetric not in user["accounting"]:
+                log_warning("For user {0} metric user.accounting.{1} is unavailable".format(user["name"], submetric), debug)
+                continue
+            timeseries = dict(metric="user.accounting.{0}".format(submetric),
+                              value=user["accounting"][submetric],
                               timestamp=timestamp,
                               tags={"user": user["name"]})
             docs.append(timeseries)

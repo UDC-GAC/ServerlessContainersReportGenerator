@@ -23,9 +23,9 @@
       "resources": {
         "cpu": {
           "max": 800,
-          "current": 200,
+          "current": 800,
           "min": 20,
-          "boundary": 20
+          "boundary": 40
         },
         "mem": {
           "max": 4192,

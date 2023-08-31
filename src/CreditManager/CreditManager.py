@@ -39,7 +39,8 @@ from src.MyUtils.MyUtils import MyConfig, log_error, get_service, beat, log_info
 import src.StateDatabase.couchdb as couchdb
 
 CONFIG_DEFAULT_VALUES = {"POLLING_FREQUENCY": 10,
-                         "ACUM_THRESHOLDS": {"cpu": 0.1},
+                         "ACUM_THRESHOLDS": 10,
+                         "COINS_PER_FOLD": 0.1,
                          "ACTIVE": True,
                          "GRIDCOIN_RPC_USER": "gridcoinrpc",
                          "GRIDCOIN_RPC_IP": "192.168.51.100",
@@ -87,15 +88,13 @@ class CreditManager:
         return result
 
     def rebase_counters(self, user):
-        REBASE_RATIO = 0.1  # Used to module how often a rebase is carried out, 1 -> 1 coin per each fold
-        REBASE_BLOCK = int(REBASE_RATIO * self.coins_credit_ratio)
-        coins_per_fold = REBASE_RATIO * 1
-        cpu_accounting = user["accounting"]["cpu"]
+        REBASE_BLOCK = int(self.coins_per_fold * self.coins_credit_ratio)
+        cpu_accounting = user["accounting"]
         uname = user["name"]
 
         num_folds = int(cpu_accounting["consumed"] / REBASE_BLOCK)
         if num_folds >= 1:
-            coins_moved = num_folds * coins_per_fold
+            coins_moved = num_folds * self.coins_per_fold
             success = self.move_credit(uname, "sink", str(coins_moved))
             if success:
                 cpu_accounting["consumed"] = round(cpu_accounting["consumed"] - num_folds * REBASE_BLOCK, 2)
@@ -144,26 +143,27 @@ class CreditManager:
                 containers.append(cont_info)
 
                 amount = int(0.5 * (cont_info["resources"]["cpu"]["max"] - cont_info["resources"]["cpu"]["current"]))
-                request = guardian.generate_request(cont_info, amount, "cpu")
-                print(request)
-                requests.append(request)
+                if amount > 0:
+                    request = guardian.generate_request(cont_info, amount, "cpu")
+                    print(request)
+                    requests.append(request)
 
         self.couchdb_handler.add_requests(requests)
 
     def check_credit(self, user):
         user_name = user["name"]
         user_restricted = user["accounting"]["restricted"]
-        user_credit = user["accounting"]["cpu"]["credit"]
+        user_credit = user["accounting"]["credit"]
         if user_restricted and user_credit <= 0:
-            log_warning("User {0} is restricted, but still does not have enough credit".format(user_name), self.debug)
+            log_warning("User {0} is restricted and does not have enough credit [KEEP RE]".format(user_name), self.debug)
         elif not user_restricted and user_credit <= 0:
-            log_warning("User {0} is not restricted, but does not have enough credit, restricting".format(user_name), self.debug)
+            log_warning("User {0} is not restricted, but does not have enough credit -> restricting [APPLY RE]".format(user_name), self.debug)
             self.restrict_user(user)
         elif user_restricted and user_credit > 0:
-            log_warning("User {0} is restricted, but has enough credit now, raising restriction".format(user_name), self.debug)
+            log_warning("User {0} is restricted, but has enough credit now -> raising restriction [RAISE RE]".format(user_name), self.debug)
             self.raise_restriction(user)
         elif not user_restricted and user_credit > 0:
-            log_warning("User {0} is not restricted and has enough credit".format(user_name), self.debug)
+            log_warning("User {0} is not restricted and has enough credit [KEEP UNRE]".format(user_name), self.debug)
 
     def manage_thread(self, users):
         users_wallets = self.get_users_wallets()
@@ -197,15 +197,15 @@ class CreditManager:
         if user_name not in users_credits:
             log_warning("User {0} does not have a wallet".format(user_name), self.debug)
         else:
-            user["accounting"]["cpu"]["credit"] = self.coins_credit_ratio * users_credits[user_name]
-            user["accounting"]["cpu"]["coins"] = users_credits[user_name]
+            user["accounting"]["credit"] = self.coins_credit_ratio * users_credits[user_name]
+            user["accounting"]["coins"] = users_credits[user_name]
 
     def compute_consumed_cpu(self, user):
-        cpu_threshold = self.thresholds["cpu"]
-        cpu_consumed = user["cpu"]["used"] / 100  # Convert shares to vcores
+        cpu_threshold = self.thresholds
+        cpu_consumed = user["cpu"]["used"]
         if cpu_consumed > cpu_threshold:
-            user["accounting"]["cpu"]["consumed"] += cpu_consumed * self.polling_frequency
-            user["accounting"]["cpu"]["consumed"] = round(user["accounting"]["cpu"]["consumed"], 2)
+            user["accounting"]["consumed"] += cpu_consumed * self.polling_frequency
+            user["accounting"]["consumed"] = round(user["accounting"]["consumed"], 2)
 
     def manage(self, ):
         myConfig = MyConfig(CONFIG_DEFAULT_VALUES)
@@ -230,16 +230,15 @@ class CreditManager:
             self.coins_credit_ratio = myConfig.get_value("COINS_TO_CREDIT_RATIO")
             SERVICE_IS_ACTIVATED = myConfig.get_value("ACTIVE")
             self.thresholds = myConfig.get_value("ACUM_THRESHOLDS")
+            self.coins_per_fold  = myConfig.get_value("COINS_PER_FOLD")
 
             t0 = start_epoch(self.debug)
 
             log_info("Config is as follows:", debug)
             log_info(".............................................", debug)
             log_info("Polling frequency -> {0}".format(self.polling_frequency), debug)
-            log_info("GRC user -> {0}".format(self.grc_user), debug)
-            log_info("GRC password -> {0}".format(self.grc_pass), debug)
-            log_info("GRC ip -> {0}".format(self.grc_ip), debug)
-            log_info("GRC port -> {0}".format(self.grc_port), debug)
+            log_info("GRC -> {0}@{1}:{2} /{3}/".format(self.grc_user, self.grc_ip, self.grc_port, self.grc_pass), debug)
+            log_info("ACUM THRESHOLD -> {0}".format(self.thresholds), debug)
             log_info(".............................................", debug)
 
             self.config_grc_connection()
