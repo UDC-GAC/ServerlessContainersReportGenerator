@@ -39,14 +39,14 @@ from src.MyUtils.MyUtils import MyConfig, log_error, get_service, beat, log_info
 import src.StateDatabase.couchdb as couchdb
 
 CONFIG_DEFAULT_VALUES = {"POLLING_FREQUENCY": 10,
-                         "ACUM_THRESHOLDS": 10,
-                         "COINS_PER_FOLD": 0.1,
+                         "MIN_SHARES": 10,
+                         "MOVE_EVERY_N_COINS": 0.1, # perform a movement once the consumed shares surpass 0.1 coins of value
+                         "COINS_TO_CREDIT_RATIO": 600,  # consumed share-s per 1 GRC -> 600 is 1 vcore for 1 minute with 10s polling
                          "ACTIVE": True,
                          "GRIDCOIN_RPC_USER": "gridcoinrpc",
                          "GRIDCOIN_RPC_IP": "192.168.51.100",
                          "GRIDCOIN_RPC_PORT": "9090",
                          "GRIDCOIN_RPC_PASS": "Bt2oEfVgnMGqvB26UapLERmDu5bvULKr9SPvPBkMkMSV",
-                         "COINS_TO_CREDIT_RATIO": 600,  # 600 credits per 1 GRC -> 1 vcore for 10 minutes
                          "DEBUG": True}
 
 SERVICE_NAME = "credit_manager"
@@ -98,8 +98,6 @@ class CreditManager:
             success = self.move_credit(uname, "sink", str(coins_moved))
             if success:
                 cpu_accounting["consumed"] = round(cpu_accounting["consumed"] - num_folds * REBASE_BLOCK, 2)
-                # cpu_accounting["credit"] -= num_folds * REBASE_BLOCK
-                # cpu_accounting["coins"] -= coins_moved
                 log_info("User {0} counters have been rebased".format(uname), self.debug)
             else:
                 log_warning("Could not move credit from user {0} to {1}, rebase not carried out".format(uname, "sink"), self.debug)
@@ -153,16 +151,16 @@ class CreditManager:
     def check_credit(self, user):
         user_name = user["name"]
         user_restricted = user["accounting"]["restricted"]
-        user_credit = user["accounting"]["credit"]
-        if user_restricted and user_credit <= 0:
+        user_coins = user["accounting"]["coins"]
+        if user_restricted and user_coins <= 0:
             log_warning("User {0} is restricted and does not have enough credit [KEEP RE]".format(user_name), self.debug)
-        elif not user_restricted and user_credit <= 0:
+        elif not user_restricted and user_coins <= 0:
             log_warning("User {0} is not restricted, but does not have enough credit -> restricting [APPLY RE]".format(user_name), self.debug)
             self.restrict_user(user)
-        elif user_restricted and user_credit > 0:
+        elif user_restricted and user_coins > 0:
             log_warning("User {0} is restricted, but has enough credit now -> raising restriction [RAISE RE]".format(user_name), self.debug)
             self.raise_restriction(user)
-        elif not user_restricted and user_credit > 0:
+        elif not user_restricted and user_coins > 0:
             log_warning("User {0} is not restricted and has enough credit [KEEP UNRE]".format(user_name), self.debug)
 
     def manage_thread(self, users):
@@ -197,7 +195,6 @@ class CreditManager:
         if user_name not in users_credits:
             log_warning("User {0} does not have a wallet".format(user_name), self.debug)
         else:
-            user["accounting"]["credit"] = self.coins_credit_ratio * users_credits[user_name]
             user["accounting"]["coins"] = users_credits[user_name]
 
     def compute_consumed_cpu(self, user):
@@ -230,7 +227,7 @@ class CreditManager:
             self.coins_credit_ratio = myConfig.get_value("COINS_TO_CREDIT_RATIO")
             SERVICE_IS_ACTIVATED = myConfig.get_value("ACTIVE")
             self.thresholds = myConfig.get_value("ACUM_THRESHOLDS")
-            self.coins_per_fold  = myConfig.get_value("COINS_PER_FOLD")
+            self.coins_per_fold = myConfig.get_value("MOVE_EVERY_N_COINS")
 
             t0 = start_epoch(self.debug)
 

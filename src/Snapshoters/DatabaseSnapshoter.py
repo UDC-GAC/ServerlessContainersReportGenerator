@@ -105,7 +105,7 @@ def get_users():
             docs.append(timeseries)
 
         # Accounting metrics
-        for submetric in ["coins", "consumed", "credit"]:
+        for submetric in ["coins", "consumed"]:
             if submetric not in user["accounting"]:
                 log_warning("For user {0} metric user.accounting.{1} is unavailable".format(user["name"], submetric), debug)
                 continue

@@ -116,7 +116,7 @@ def subscribe_user(user_name):
     user["type"] = "user"
 
     # Initialize accounting
-    user["accounting"] = {"active": True, "restricted": False, "consumed": 0, "credit": 0, "coins": 0}
+    user["accounting"] = {"active": True, "restricted": False, "consumed": 0, "coins": 0}
 
     get_db().add_user(user)
 
