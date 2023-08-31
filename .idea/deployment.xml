@@ -6,6 +6,7 @@
         <serverdata>
           <mappings>
             <mapping deploy="/ServerlessYARN/ServerlessContainers" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/ServerlessYARN/BlockchainServerless" local="$PROJECT_DIR$/../BlockchainServerless" web="/" />
           </mappings>
           <excludedPaths>
             <excludedPath local="true" path="$PROJECT_DIR$/conf/Orchestrator/layout.json" />
