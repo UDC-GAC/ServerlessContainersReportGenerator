@@ -40,8 +40,8 @@ import src.StateDatabase.couchdb as couchdb
 
 CONFIG_DEFAULT_VALUES = {"POLLING_FREQUENCY": 10,
                          "MIN_SHARES": 10,
-                         "MOVE_EVERY_N_COINS": 0.1, # perform a movement once the consumed shares surpass 0.1 coins of value
-                         "COINS_TO_CREDIT_RATIO": 600,  # consumed share-s per 1 GRC -> 600 is 1 vcore for 1 minute with 10s polling
+                         "MOVE_EVERY_N_COINS": 0.5, # perform a movement once the consumed shares surpass 0.1 coins of value
+                         "COINS_TO_CREDIT_RATIO": 60000,  # consumed share-s per 1 GRC -> 60000 is 100 shares (1 vcore) for 10 minutes with 10s polling
                          "ACTIVE": True,
                          "GRIDCOIN_RPC_USER": "gridcoinrpc",
                          "GRIDCOIN_RPC_IP": "192.168.51.100",
@@ -97,7 +97,7 @@ class CreditManager:
             coins_moved = num_folds * self.coins_per_fold
             success = self.move_credit(uname, "sink", str(coins_moved))
             if success:
-                cpu_accounting["consumed"] = round(cpu_accounting["consumed"] - num_folds * REBASE_BLOCK, 2)
+                cpu_accounting["consumed"] -= num_folds * REBASE_BLOCK
                 log_info("User {0} counters have been rebased".format(uname), self.debug)
             else:
                 log_warning("Could not move credit from user {0} to {1}, rebase not carried out".format(uname, "sink"), self.debug)
@@ -202,7 +202,6 @@ class CreditManager:
         cpu_consumed = user["cpu"]["used"]
         if cpu_consumed > cpu_threshold:
             user["accounting"]["consumed"] += cpu_consumed * self.polling_frequency
-            user["accounting"]["consumed"] = round(user["accounting"]["consumed"], 2)
 
     def manage(self, ):
         myConfig = MyConfig(CONFIG_DEFAULT_VALUES)
