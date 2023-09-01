@@ -22,8 +22,8 @@ bash $ORCHESTRATOR_PATH/DatabaseSnapshoter/set_polling_frequency.sh 5
 
 echo "Configuring Refeeder"
 bash $ORCHESTRATOR_PATH/Refeeder/activate.sh
-bash $ORCHESTRATOR_PATH/Refeeder/set_window_timelapse.sh 10 #7
-bash $ORCHESTRATOR_PATH/Refeeder/set_window_delay.sh 10 #15
+bash $ORCHESTRATOR_PATH/Refeeder/set_window_timelapse.sh 10
+bash $ORCHESTRATOR_PATH/Refeeder/set_window_delay.sh 12
 
 echo "Configuring Rebalancer"
 bash $ORCHESTRATOR_PATH/Rebalancer/deactivate.sh

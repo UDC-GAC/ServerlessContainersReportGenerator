@@ -93,6 +93,17 @@ def get_users():
     for user in db_handler.get_users():
         print(user)
         timestamp = int(time.time())
+        # CPU metrics
+        for submetric in ["used"]:
+            if submetric not in user["cpu"]:
+                log_warning("For user {0} metric user.cpu.{1} is unavailable".format(user["name"], submetric), debug)
+                continue
+            timeseries = dict(metric="user.cpu.{0}".format(submetric),
+                              value=user["cpu"][submetric],
+                              timestamp=timestamp,
+                              tags={"user": user["name"]})
+            docs.append(timeseries)
+
         # Energy metrics
         for submetric in ["used", "max", "usage", "current"]:
             if submetric not in user["energy"]:

@@ -59,4 +59,4 @@
     ./build/tsdb mkmetric user.energy.used
     ./build/tsdb mkmetric user.energy.max
     ./build/tsdb mkmetric user.cpu.current
-    ./build/tsdb mkmetric user.cpu.usage
+    ./build/tsdb mkmetric user.cpu.used

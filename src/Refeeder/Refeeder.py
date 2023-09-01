@@ -54,7 +54,7 @@ REFEEDER_APPLICATION_METRICS = {'cpu': ['proc.cpu.user', 'proc.cpu.kernel'],
                                 'energy': ["sys.cpu.energy"]}
 
 CONFIG_DEFAULT_VALUES = {"WINDOW_TIMELAPSE": 10,
-                         "WINDOW_DELAY": 20,
+                         "WINDOW_DELAY": 12,
                          "GENERATED_METRICS": ["cpu", "mem"],
                          "DEBUG": True
                          }

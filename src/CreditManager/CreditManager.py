@@ -40,7 +40,7 @@ import src.StateDatabase.couchdb as couchdb
 
 CONFIG_DEFAULT_VALUES = {"POLLING_FREQUENCY": 10,
                          "MIN_SHARES": 10,
-                         "MOVE_EVERY_N_COINS": 0.5, # perform a movement once the consumed shares surpass 0.1 coins of value
+                         "MOVE_EVERY_N_COINS": 0.1, # perform a movement once the consumed shares surpass 0.1 coins of value
                          "COINS_TO_CREDIT_RATIO": 60000,  # consumed share-s per 1 GRC -> 60000 is 100 shares (1 vcore) for 10 minutes with 10s polling
                          "ACTIVE": True,
                          "GRIDCOIN_RPC_USER": "gridcoinrpc",
@@ -234,7 +234,10 @@ class CreditManager:
             log_info(".............................................", debug)
             log_info("Polling frequency -> {0}".format(self.polling_frequency), debug)
             log_info("GRC -> {0}@{1}:{2} /{3}/".format(self.grc_user, self.grc_ip, self.grc_port, self.grc_pass), debug)
-            log_info("ACUM THRESHOLD -> {0}".format(self.thresholds), debug)
+            log_info("THRESHOLD -> {0}".format(self.thresholds), debug)
+            log_info("MOVE_EVERY_N_COINS -> {0}".format(self.coins_per_fold), debug)
+            human_conversion = int(self.coins_credit_ratio / (100 * 60))
+            log_info("COINS_TO_CREDIT_RATIO -> {0}, that means that 1 GRC buys {1} vcore-m".format(self.coins_credit_ratio, human_conversion), debug)
             log_info(".............................................", debug)
 
             self.config_grc_connection()
