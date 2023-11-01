@@ -27,10 +27,8 @@ import configparser
 import os
 import sys
 
-
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
-
 
 def get_numeric_value(d, key, default, numeric_type):
     try:
@@ -131,7 +129,7 @@ class MongoDBConfig(DatabaseConfig):
         return self.config["MONGODB_USER"]
 
 
-class ReporterConfig:
+class Config:
     __base_path = os.path.dirname(os.path.abspath(__file__))
     __config_path = "../../conf/report_generator_config.ini"
     __config_keys = [
@@ -176,9 +174,9 @@ class ReporterConfig:
         "USERS_LIST": "user0",
         "APPS_LIST": "app1",
         "Y_AMPLIFICATION_FACTOR": 1.2,
-        "XLIM": 2000,
-        "YLIM": "cpu:default:10000,energy:default:2000",
-        "XTICKS_STEP": 100,
+        "XLIM": "default:1000",
+        "YLIM": "cpu:default:10000",
+        "XTICKS_STEP": 50,
         "REPORTED_RESOURCES": "cpu,mem",
         "EXPERIMENT_TYPE": "serverless",
         "PRINT_ENERGY_MAX": "true",
@@ -308,7 +306,7 @@ class ReporterConfig:
 
         # self.XLIM = get_int_value(ENV, "XLIM", self.__default_environment_values["XLIM"])
 
-        self.XLIM = {"default": 1000}
+        self.XLIM = {}
         for pair in ENV["XLIM"].rstrip('"').lstrip('"').split(","):
             structure_name, limit = pair.split(":")
             try:

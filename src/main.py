@@ -26,13 +26,12 @@ from __future__ import print_function
 import sys
 import time
 
-from src.reporting.config import MongoDBConfig
-from src.reporting.ExperimentReporter import ExperimentReporter
+from src.common.config import MongoDBConfig, eprint
+from src.ExperimentReporter import ExperimentReporter
 from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+
 
 
 mongoDBConfig = MongoDBConfig()

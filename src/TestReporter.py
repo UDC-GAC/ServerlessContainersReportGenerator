@@ -26,26 +26,20 @@ from __future__ import print_function
 import sys
 
 from src.opentsdb import bdwatchdog
-from src.plotting.utils import get_plots
-from src.reporting.config import ReporterConfig, OpenTSDBConfig
-from src.reporting.latex_output import latex_print, print_latex_stress
+from src.common.config import Config, OpenTSDBConfig, eprint
+from src.latex.latex_output import latex_print, print_latex_stress
 
-from src.plotting.barplots import plot_tests_resource_usage, plot_tests_times, \
-    plot_tests_times_with_stepping
-from src.plotting.timeseries_plots import plot_document
+from src.barplotting.barplots import plot_tests_resource_usage, plot_tests_times
+from src.lineplotting.lineplots import plot_document
 
-from src.reporting.utils import generate_duration, translate_metric, format_metric, flush_table, \
-    print_basic_doc_info, some_test_has_missing_aggregate_information, generate_resources_timeseries
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+from src.common.utils import generate_duration, translate_metric, format_metric, flush_table, \
+    print_basic_doc_info, generate_resources_timeseries, get_plots
 
 
 class TestReporter:
     def __init__(self):
         # Get the config
-        self.cfg = ReporterConfig()
+        self.cfg = Config()
         self.bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
     def process_test(self, test):

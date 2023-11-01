@@ -24,9 +24,7 @@ import sys
 import requests
 import json
 
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+from src.common.config import eprint
 
 
 class BDWatchdog:
@@ -79,24 +77,6 @@ class BDWatchdog:
                 usages[metric_name] = dps
 
         return usages
-
-    @staticmethod
-    def perform_hysteresis_aggregation(timeseries):
-        hysteresis_count = 0
-        points = list(timeseries.items())
-        if points:
-            # Perform the differentiation
-            previous_time = int(points[0][0])
-            previous_value = points[0][1]
-            for point in points[1:]:
-                time = int(point[0])
-                value = point[1]
-                diff_time = time - previous_time
-                diff_value = abs(value - previous_value)
-                hysteresis_count += diff_value / diff_time
-                previous_time = time
-                previous_value = value
-        return hysteresis_count
 
     @staticmethod
     def perform_timeseries_range_apply(timeseries, ymin=0, ymax=None):

@@ -28,26 +28,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.opentsdb import bdwatchdog
-from src.plotting.utils import translate_plot_name_to_ylabel, line_style, dashes_dict, \
-    line_marker, save_figure, TIMESERIES_FIGURE_SIZE, LEGEND_FONTSIZE
-from src.reporting.config import ReporterConfig, OpenTSDBConfig
-from src.reporting.utils import translate_metric
+from src.lineplotting.utils import translate_plot_name_to_ylabel
+from src.lineplotting.style import line_style, dashes_dict, line_marker, TIMESERIES_FIGURE_SIZE, LEGEND_FONTSIZE
+from src.common.config import Config, OpenTSDBConfig, eprint
+from src.common.utils import translate_metric, save_figure
 
 # Get the config
-cfg = ReporterConfig()
+cfg = Config()
 
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
 def plot_document(doc, structure, plots, start_time, end_time, plotted_resources):
     if "test_name" in doc:
         doc_name = doc["test_name"]
-        benchmark_type = doc["test_name"].split("_")[0]
+        benchmark_type = "TESTS"  # doc["test_name"].split("_")[0]
     else:
         doc_name = doc["experiment_id"]
         benchmark_type = "EXPERIMENT"
@@ -70,17 +66,6 @@ def plot_document(doc, structure, plots, start_time, end_time, plotted_resources
 
         fig = plt.figure(figsize=TIMESERIES_FIGURE_SIZE)
         ax1 = fig.add_subplot(111)
-
-        # TODO This should be moved to a function "trim"
-        # Values used for trimming time series if necessary #
-        check_range, ymin, ymax = False, 0, None
-        if resource == "disk":
-            check_range, ymin, ymax = True, 0, 200
-            if structure_type == "node":
-                check_range, ymin, ymax = True, 0, 200
-            elif structure_type == "app":
-                check_range, ymin, ymax = True, 0, 1200
-        #####################################################
 
         # Values used for setting the X and Y limits, without depending on actual time series values ####
         if cfg.STATIC_LIMITS:
@@ -106,57 +91,32 @@ def plot_document(doc, structure, plots, start_time, end_time, plotted_resources
 
             timeseries = structure_resources[metric_name]
 
-            # Apply range trimming if necessary
-            if check_range:
-                timeseries = bdwatchdog_handler.perform_timeseries_range_apply(timeseries, ymin, ymax)
-
             # Convert the time stamps to times relative to 0 (basetime)
             basetime = int(list(timeseries.keys())[0])
             x = list(map(lambda point: int(point) - basetime, timeseries))
 
-            # # TODO HOTFIX
-            # PADDING = 0
-            # if structure_name == "comp_user0":
-            #     if len(plots[resource]) == 1 and (
-            #             metric_name == "structure.energy.usage" or metric_name == "structure.cpu.usage"):
-            #         x = list(map(lambda point: 2800 + int(point) - basetime, timeseries))
-            #         PADDING = 2800
-            #     else:
-            #         x = list(map(lambda point: 3100 + int(point) - basetime, timeseries))
-            #         PADDING = 3100
-
             # Get the time series points and rebase them if necessary
             if resource == "mem":
                 # Translate from MiB to GiB
-                y = list(map(lambda point: int(int(point) / 1024), timeseries.values()))
+                y = list(map(lambda point: int(point / 1024), timeseries.values()))
             else:
-                y = list(timeseries.values())
+                y = list(map(lambda point: int(point), timeseries.values()))
 
             # Set the maximum time series  time and value points
-            # max_y_ts_point_value = max(max_y_ts_point_value, max(y))
+            max_y_ts_point_value = max(max_y_ts_point_value, max(y))
             max_x_ts_point_value = max(max_x_ts_point_value, max(x))
 
-            # Plot a time series
+            # Get the line style
             linestyle = line_style[resource][metric_name]
 
-            if len(plots[resource]) == 1 and metric_name == "structure.energy.usage":
-                # TODO Hotfix
-                ax1.plot(x, y,
-                         label=translate_metric(metric_name),
-                         linestyle=linestyle,
-                         dashes=dashes_dict[linestyle],
-                         marker=line_marker[resource][metric_name],
-                         markersize=6,
-                         markevery=5,
-                         color="tab:orange")
-            else:
-                ax1.plot(x, y,
-                         label=translate_metric(metric_name),
-                         linestyle=linestyle,
-                         dashes=dashes_dict[linestyle],
-                         marker=line_marker[resource][metric_name],
-                         markersize=6,
-                         markevery=5)
+            ax1.plot(x, y,
+                     label=translate_metric(metric_name),
+                     linestyle=linestyle,
+                     dashes=dashes_dict[linestyle],
+                     marker=line_marker[resource][metric_name],
+                     markersize=6,
+                     markevery=5
+                     )
 
         # Set x and y limits
         top, bottom = max_y_ts_point_value, 0
@@ -171,7 +131,6 @@ def plot_document(doc, structure, plots, start_time, end_time, plotted_resources
 
         # Set properties to the whole plot
         plt.xlabel('Time(s)', fontsize=11)
-        #plt.xlabel('Time(s)', fontsize=13)
         plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
         plt.title('')
         plt.grid(True)
@@ -209,7 +168,7 @@ def plot_document(doc, structure, plots, start_time, end_time, plotted_resources
 def plot_user(doc, user, plots, start_time, end_time, plotted_resources):
     if "test_name" in doc:
         doc_name = doc["test_name"]
-        benchmark_type = doc["test_name"].split("_")[0]
+        benchmark_type = "TESTS"  # doc["test_name"].split("_")[0]
     else:
         doc_name = doc["experiment_id"]
         benchmark_type = "EXPERIMENT"
@@ -286,7 +245,6 @@ def plot_user(doc, user, plots, start_time, end_time, plotted_resources):
 
         # Set properties to the whole plot
         plt.xlabel('Time(s)', fontsize=11)
-        #plt.xlabel('Time(s)', fontsize=13)
         plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
         plt.title('')
         plt.grid(True)

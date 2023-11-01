@@ -25,24 +25,19 @@ from __future__ import print_function
 import sys
 import time
 
-from src.plotting.timeseries_plots import plot_document, plot_user
-from src.plotting.utils import get_plots
-from src.reporting.config import ReporterConfig, MongoDBConfig
+from src.lineplotting.lineplots import plot_document, plot_user
+from src.common.config import Config, MongoDBConfig, eprint
 
-from src.reporting.latex_output import print_latex_section
-from src.reporting.TestReporter import TestReporter
+from src.latex.latex_output import print_latex_section
+from src.TestReporter import TestReporter
 from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
-from src.reporting.utils import generate_duration, print_basic_doc_info, split_tests_by_test_type, \
-    generate_resources_timeseries
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+from src.common.utils import generate_duration, print_basic_doc_info, split_tests_by_test_type, \
+    generate_resources_timeseries, get_plots
 
 
 class ExperimentReporter():
     def __init__(self):
-        self.cfg = ReporterConfig()
+        self.cfg = Config()
         mongoDBConfig = MongoDBConfig()
         self.timestampingAgent = MongoDBTimestampAgent(mongoDBConfig.get_config_as_dict())
 
@@ -74,7 +69,7 @@ class ExperimentReporter():
              False),
             ("Resource overheads", testRepo.print_tests_resource_overhead_report, [self.cfg.NUM_BASE_EXPERIMENTS],
              False and self.cfg.NUM_BASE_EXPERIMENTS != 0)]
-        # ("Resource hysteresis", testRepo.print_tests_resource_hysteresis_report, [], False)]
+
 
         for test_type in benchmarks:
             for report in test_reports:
