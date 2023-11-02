@@ -33,16 +33,12 @@ from src.common.config import OpenTSDBConfig
 from src.latex.latex_output import latex_print
 from src.common.config import Config
 
-
-
-
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
-
-
 # Get the config
 cfg = Config()
+
 
 # Generate the resource information of both tests and experiments
 def generate_resources_timeseries(document, cfg):
@@ -66,7 +62,7 @@ def generate_resources_timeseries(document, cfg):
     for node_name in cfg.NODES_LIST:
         document["resources"][node_name] = \
             bdwatchdog_handler.get_structure_timeseries(node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS,
-                                                            downsample=cfg.DOWNSAMPLE)
+                                                        downsample=cfg.DOWNSAMPLE)
 
         metrics_to_agregate = document["resources"][node_name]
         document["resource_aggregates"][node_name] = \
@@ -154,7 +150,7 @@ def generate_resources_timeseries(document, cfg):
     for app in cfg.APPS_LIST:
         document["resources"][app] = \
             bdwatchdog_handler.get_structure_timeseries(app, start, end, cfg.BDWATCHDOG_APP_METRICS,
-                                                            downsample=cfg.DOWNSAMPLE)
+                                                        downsample=cfg.DOWNSAMPLE)
 
         document["resource_aggregates"][app] = \
             bdwatchdog_handler.perform_structure_metrics_aggregations(start, end, document["resources"][app])
@@ -208,6 +204,7 @@ def flush_table(table, header, table_caption=None):
     if table_caption:
         latex_print("Table: " + table_caption)
 
+
 def create_output_directory(figure_filepath_directory):
     pathlib.Path(figure_filepath_directory).mkdir(parents=True, exist_ok=True)
 
@@ -230,9 +227,9 @@ def get_plots():
 
     plots["app"] = dict()
 
-    plots["app"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["app"]["serverless"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["app"]["energy"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
+    plots["app"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+    plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
     plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')]
     plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
@@ -257,10 +254,10 @@ def get_plots():
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
 
     plots["node"] = dict()
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["serverless"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["energy"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
+    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
     plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')
                                          # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host')
@@ -291,12 +288,14 @@ def get_plots():
 
     return plots
 
+
 def save_figure(figure_filepath_directory, figure_name, figure, format="svg"):
     figure_filepath = "{0}/{1}".format(figure_filepath_directory, figure_name)
     create_output_directory(figure_filepath_directory)
     # figure.savefig(figure_filepath, transparent=True, bbox_inches='tight', pad_inches=0, format=format)
     # figure.savefig(figure_filepath, transparent=True, bbox_inches='tight', pad_inches=0, format=format)
     figure.savefig(figure_filepath, bbox_inches='tight', pad_inches=0, format=format)
+
 
 def format_metric(value, label, aggregation):
     if aggregation == "AVG":
@@ -349,9 +348,9 @@ def get_plots():
 
     plots["app"] = dict()
 
-    plots["app"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["app"]["serverless"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["app"]["energy"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
+    plots["app"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+    plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
     plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')]
     plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
@@ -361,14 +360,6 @@ def get_plots():
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
-    plots["app"]["untreated"]["disk"] = [('structure.disk.current', 'structure'), ('structure.disk.usage', 'structure')]
-    plots["app"]["serverless"]["disk"] = plots["app"]["untreated"]["disk"]
-    plots["app"]["energy"]["disk"] = plots["app"]["untreated"]["disk"]
-
-    plots["app"]["untreated"]["net"] = [('structure.net.current', 'structure'), ('structure.net.usage', 'structure')]
-    plots["app"]["serverless"]["net"] = plots["app"]["untreated"]["net"]
-    plots["app"]["energy"]["net"] = plots["app"]["untreated"]["net"]
-
     if cfg.PRINT_ENERGY_MAX:
         plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
     plots["app"]["untreated"]["energy"].append(('structure.energy.usage', 'structure'))
@@ -376,10 +367,10 @@ def get_plots():
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
 
     plots["node"] = dict()
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["serverless"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
-    plots["node"]["energy"] = {"cpu": [], "mem": [], "disk": [], "net": [], "energy": []}
+    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+    plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
     plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')
                                          # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host')
@@ -396,19 +387,10 @@ def get_plots():
     # ('proc.mem.resident', 'host'),
     plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
 
-    plots["node"]["untreated"]["disk"] = [('structure.disk.current', 'structure'), ('proc.disk.reads.mb', 'host'),
-                                          ('proc.disk.writes.mb', 'host')]
-    plots["node"]["serverless"]["disk"] = plots["node"]["untreated"]["disk"]
-    plots["node"]["energy"]["disk"] = plots["node"]["untreated"]["disk"]
-
-    plots["node"]["untreated"]["net"] = [('structure.net.current', 'structure'), ('proc.net.tcp.in.mb', 'host'),
-                                         ('proc.net.tcp.out.mb', 'host')]
-    plots["node"]["serverless"]["net"] = plots["node"]["untreated"]["net"]
-    plots["node"]["energy"]["net"] = plots["node"]["untreated"]["net"]
-
     plots["node"]["energy"]["energy"] = [('structure.energy.usage', 'structure')]
 
     return plots
+
 
 def translate_metric(metric):
     translated_metric = list()

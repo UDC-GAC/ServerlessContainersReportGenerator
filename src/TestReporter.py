@@ -42,7 +42,7 @@ class TestReporter:
         self.cfg = Config()
         self.bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
-    def process_test(self, test):
+    def get_test_data(self, test):
         test = generate_duration(test)
         test = generate_resources_timeseries(test, self.cfg)
         return test

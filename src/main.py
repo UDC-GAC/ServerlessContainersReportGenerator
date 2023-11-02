@@ -24,40 +24,22 @@
 from __future__ import print_function
 
 import sys
-import time
 
 from src.common.config import MongoDBConfig, eprint
 from src.ExperimentReporter import ExperimentReporter
 from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
 
-
-
-
-
 mongoDBConfig = MongoDBConfig()
 timestampingAgent = MongoDBTimestampAgent(mongoDBConfig.get_config_as_dict())
 experimentReporter = ExperimentReporter()
 
-
-def report_all_experiments():
-    experiments = timestampingAgent.get_all_experiments(mongoDBConfig.get_username())
-    if experiments:
-        for exp in experiments:
-            time_start = time.time()
-            experimentReporter.report_experiment(exp)
-            time_end = time.time()
-            eprint("Reporting of experiment {0} took {1} seconds".format(exp["experiment_name"], time_end - time_start))
-
-
 if __name__ == '__main__':
-    eprint("[INFO] If you are running the 'generate_report.py', remember that the output is markdown for latex generation!!")
-    eprint("[INFO] To get a nice report in PDF format, run the script 'generate_report.sh' with the same input as this python")
     if len(sys.argv) < 2:
-        print("Must specify an experiment name")
+        print("Must specify an experiment name as the first argument")
     else:
         experiment_name = sys.argv[1]
         experiment = timestampingAgent.get_experiment(experiment_name, mongoDBConfig.get_username())
         if experiment:
             experimentReporter.report_experiment(experiment)
         else:
-            eprint("No experiment '{0}' found".format(experiment_name))
+            eprint("Experiment '{0}' not found".format(experiment_name))

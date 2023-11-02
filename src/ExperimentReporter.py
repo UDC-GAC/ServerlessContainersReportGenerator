@@ -41,7 +41,7 @@ class ExperimentReporter():
         mongoDBConfig = MongoDBConfig()
         self.timestampingAgent = MongoDBTimestampAgent(mongoDBConfig.get_config_as_dict())
 
-    def process_experiment(self, exp):
+    def get_experiment_data(self, exp):
         exp = generate_duration(exp)
         exp = generate_resources_timeseries(exp, self.cfg)
         return exp
@@ -69,7 +69,6 @@ class ExperimentReporter():
              False),
             ("Resource overheads", testRepo.print_tests_resource_overhead_report, [self.cfg.NUM_BASE_EXPERIMENTS],
              False and self.cfg.NUM_BASE_EXPERIMENTS != 0)]
-
 
         for test_type in benchmarks:
             for report in test_reports:
@@ -116,12 +115,18 @@ class ExperimentReporter():
         testRepo = TestReporter()
         report_type = self.cfg.EXPERIMENT_TYPE
 
-        # GENERATE ALL ADDED INFO ABOUT EXPERIMENT
-        experiment = self.process_experiment(exp)
+        # Get the timeseries and compute durations for the experiment
+        experiment = self.get_experiment_data(exp)
+
+        # Print the basic experiment info
+        eprint("Generating experiment info at {0}".format(time.strftime("%D %H:%M:%S", time.localtime())))
+        self.print_experiment_report(experiment)
+
         if self.cfg.GENERATE_EXPERIMENT_PLOT:
             if "end_time" not in experiment or "start_time" not in experiment:
                 return
 
+            eprint("Plotting experiment {0}".format(time.strftime("%D %H:%M:%S", time.localtime())))
             start, end = experiment["start_time"], experiment["end_time"]
             plots = get_plots()
 
@@ -142,17 +147,13 @@ class ExperimentReporter():
                     user_plots = plots["user"][report_type]
                     plot_user(experiment, user, user_plots, start, end, self.cfg.REPORTED_RESOURCES)
 
-        # GENERATE ALL ADDED INFO ABOUT TESTS
+        # Get the experiment tests
         tests = self.timestampingAgent.get_experiment_tests(experiment["experiment_id"], experiment["username"])
 
-        processed_tests = list()
-        for test in tests:
-            processed_tests.append(testRepo.process_test(test))
+        # Get the timeseries and compute durations for the tests
+        processed_tests = list(testRepo.get_test_data(test) for test in tests)
 
-        # PRINT BASIC EXPERIMENT INFO
-        eprint("Generating experiment info at {0}".format(time.strftime("%D %H:%M:%S", time.localtime())))
-        self.print_experiment_report(experiment)
-
+        # Print the basic tests info
         if report_type == "serverless":
             self.report_tests_serverless(processed_tests)
         elif report_type == "energy":
