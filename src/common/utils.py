@@ -214,8 +214,8 @@ def get_plots():
     plots["user"] = dict()
 
     plots["user"]["untreated"] = {"cpu": [], "energy": []}
-    plots["user"]["energy"] = {"cpu": [], "energy": []}
     plots["user"]["serverless"] = {"cpu": [], "energy": []}
+    plots["user"]["energy"] = {"cpu": [], "energy": []}
 
     plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.usage', 'structure')]
     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
@@ -239,13 +239,6 @@ def get_plots():
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
-    plots["app"]["untreated"]["disk"] = [('structure.disk.current', 'structure'), ('structure.disk.usage', 'structure')]
-    plots["app"]["serverless"]["disk"] = plots["app"]["untreated"]["disk"]
-    plots["app"]["energy"]["disk"] = plots["app"]["untreated"]["disk"]
-
-    plots["app"]["untreated"]["net"] = [('structure.net.current', 'structure'), ('structure.net.usage', 'structure')]
-    plots["app"]["serverless"]["net"] = plots["app"]["untreated"]["net"]
-    plots["app"]["energy"]["net"] = plots["app"]["untreated"]["net"]
 
     if cfg.PRINT_ENERGY_MAX:
         plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
@@ -273,16 +266,6 @@ def get_plots():
                                           ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
     # ('proc.mem.resident', 'host'),
     plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
-
-    plots["node"]["untreated"]["disk"] = [('structure.disk.current', 'structure'), ('proc.disk.reads.mb', 'host'),
-                                          ('proc.disk.writes.mb', 'host')]
-    plots["node"]["serverless"]["disk"] = plots["node"]["untreated"]["disk"]
-    plots["node"]["energy"]["disk"] = plots["node"]["untreated"]["disk"]
-
-    plots["node"]["untreated"]["net"] = [('structure.net.current', 'structure'), ('proc.net.tcp.in.mb', 'host'),
-                                         ('proc.net.tcp.out.mb', 'host')]
-    plots["node"]["serverless"]["net"] = plots["node"]["untreated"]["net"]
-    plots["node"]["energy"]["net"] = plots["node"]["untreated"]["net"]
 
     plots["node"]["energy"]["energy"] = [('structure.energy.usage', 'structure')]
 
@@ -330,7 +313,7 @@ def some_test_has_missing_aggregate_information(tests):
     return False
 
 
-def get_plots():
+def get_plots_metrics():
     plots = dict()
     plots["user"] = dict()
 
@@ -464,11 +447,5 @@ def get_times_from_doc(doc):
     return start_time_string, end_time_string, duration, duration_minutes
 
 
-def split_tests_by_test_type(tests):
-    benchmarks = dict()
-    for test in tests:
-        test_benchmark = test["test_name"].split("_")[0]
-        if test_benchmark not in benchmarks:
-            benchmarks[test_benchmark] = list()
-        benchmarks[test_benchmark].append(test)
-    return benchmarks
+def nowt():
+    return time.strftime("%D %H:%M:%S", time.localtime())

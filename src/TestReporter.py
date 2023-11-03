@@ -23,17 +23,15 @@
 
 from __future__ import print_function
 
-import sys
 
 from src.opentsdb import bdwatchdog
 from src.common.config import Config, OpenTSDBConfig, eprint
 from src.latex.latex_output import latex_print, print_latex_stress
 
-from src.barplotting.barplots import plot_tests_resource_usage, plot_tests_times
-from src.lineplotting.lineplots import plot_document
+from src.lineplotting.lineplots import plot_test
 
 from src.common.utils import generate_duration, translate_metric, format_metric, flush_table, \
-    print_basic_doc_info, generate_resources_timeseries, get_plots
+    print_basic_doc_info, generate_resources_timeseries, get_plots_metrics
 
 
 class TestReporter:
@@ -55,19 +53,22 @@ class TestReporter:
                 return
 
             start, end = test["start_time"], test["end_time"]
-            plots = get_plots()
+            plots = get_plots_metrics()
 
             if self.cfg.GENERATE_NODES_PLOTS:
                 for node in self.cfg.NODES_LIST:
                     test_plots = plots["node"][report_type]
-                    structure = (node, "node")
-                    plot_document(test, structure, test_plots, start, end, self.cfg.REPORTED_RESOURCES)
+                    plot_test(test, node, "node", test_plots, start, end, self.cfg.REPORTED_RESOURCES)
 
             if self.cfg.GENERATE_APP_PLOTS:
                 for app in self.cfg.APPS_LIST + ["ALL"]:
                     app_plots = plots["app"][report_type]
-                    structure = (app, "app")
-                    plot_document(test, structure, app_plots, start, end, self.cfg.REPORTED_RESOURCES)
+                    plot_test(test, app, "app", app_plots, start, end, self.cfg.REPORTED_RESOURCES)
+
+            if self.cfg.GENERATE_USER_PLOTS:
+                for user in self.cfg.USERS_LIST + ["ALL"]:
+                    user_plots = plots["user"][report_type]
+                    plot_test(test, user, "user", user_plots, start, end, self.cfg.REPORTED_RESOURCES)
 
     # PRINT TEST RESOURCE USAGES
     def print_test_resources(self, test, structures_list):
@@ -110,59 +111,6 @@ class TestReporter:
         for row in rows:
             final_rows += list(rows[row].values())
         flush_table(final_rows, headers, table_caption)
-
-    # PRINT TEST RESOURCE OVERHEAD
-    def print_tests_resource_overhead_report(self, tests, num_base_experiments=3, print_with_stepping=True):
-        table_caption = "TESTs resource overhead"
-        max_columns = self.cfg.MAX_COLUMNS["print_tests_resource_overhead_report"]
-        resource_tuples = self.cfg.METRICS_FOR_OVERHEAD_REPORT
-
-        overheads, base_values, headers, num_columns, remaining_data = dict(), dict(), ["resource"], 0, False
-
-        for test in tests[:num_base_experiments]:
-            headers.append(test["test_name"])
-            for resource_tuple in resource_tuples:
-                resource, usage_metric = resource_tuple
-                if resource not in overheads:
-                    overheads[resource] = [resource]
-                    base_values[resource] = 0
-
-                if test["resource_aggregates"] != "n/a":
-                    overheads[resource].append("---")
-                    base_values[resource] += test["resource_aggregates"]["ALL"][usage_metric]["SUM"]
-                else:
-                    overheads[resource].append("n/a")
-        for resource in base_values:
-            base_values[resource] = base_values[resource] / num_base_experiments
-
-        num_columns += num_base_experiments
-
-        for test in tests[num_base_experiments:]:
-            headers.append(test["test_name"])
-            for resource_tuple in resource_tuples:
-                resource, usage_metric = resource_tuple
-
-                if resource not in overheads:
-                    overheads[resource] = [resource]
-
-                if test["resource_aggregates"] != "n/a":
-                    overhead = test["resource_aggregates"]["ALL"][usage_metric]["SUM"] / base_values[resource]
-                    resource_overhead = str(int((overhead - 1) * 100)) + "%"
-                else:
-                    resource_overhead = "n/a"
-
-                overheads[resource].append(resource_overhead)
-
-            num_columns += 1
-            remaining_data = True
-            if num_columns >= max_columns:
-                flush_table(overheads.values(), headers, table_caption)
-                table_caption = None
-                overheads, headers, num_columns, remaining_data = dict(), ["resource"], 0, False
-        if remaining_data:
-            flush_table(overheads.values(), headers, table_caption)
-
-        plot_tests_resource_usage(tests)
 
     # PRINT TEST RESOURCE UTILIZATION
     def print_tests_resource_utilization(self, tests):
@@ -296,7 +244,8 @@ class TestReporter:
         if remaining_data:
             self.flush_rows_with_aggregations(rows, headers, table_caption)
 
-    def print_test_report(self, tests, print_node_info):
+    def print_test_report(self, tests):
+        print_node_info = self.cfg.PRINT_NODE_INFO
         # PRINT BASIC INFO ABOUT THE TEST
         for test in tests:
             print_basic_doc_info(test)
@@ -340,58 +289,3 @@ class TestReporter:
 
         if remaining_data:
             flush_table([durations_seconds, durations_minutes], headers, table_caption)
-
-    def print_summarized_tests_info(self, tests, num_base_experiments, print_with_stepping=True):
-        max_columns = self.cfg.MAX_COLUMNS["print_summarized_tests_info"]
-        table_caption = "TESTs durations and time benchmarking (over the first {0} experiments)".format(
-            num_base_experiments)
-
-        headers, overheads, durations_seconds, durations_minutes, num_columns, remaining_data = \
-            ["time"], ["overhead"], ["seconds"], ["minutes"], 0, False
-        basetime = 0
-
-        if num_base_experiments == 0:
-            basetime = 1
-        else:
-            for test in tests[:num_base_experiments]:
-                headers.append(test["test_name"])
-                basetime += test["duration"]
-                overheads.append("---")
-                durations_seconds.append(test["duration"])
-                durations_minutes.append("{:.2f}".format((test["duration"]) / 60))
-
-                num_columns += 1
-                remaining_data = True
-                if num_columns >= max_columns:
-                    flush_table([durations_seconds, durations_minutes, overheads], headers, table_caption)
-                    table_caption = None
-                    headers, overheads, durations_seconds, durations_minutes, num_columns, remaining_data = \
-                        ["time"], ["overhead"], ["seconds"], ["minutes"], 0, False
-
-            basetime = basetime / num_base_experiments
-
-        for test in tests[num_base_experiments:]:
-            headers.append(test["test_name"])
-            seconds, minutes, overhead = "n/a", "n/a", "n/a"
-            if test["duration"] != "n/a":
-                seconds = test["duration"]
-                minutes = "{:.2f}".format((test["duration"]) / 60)
-                overhead = test["duration"] / basetime
-                overhead = str(int((overhead - 1) * 100)) + "%"
-
-            durations_seconds.append(seconds)
-            durations_minutes.append(minutes)
-            overheads.append(overhead)
-
-            num_columns += 1
-            remaining_data = True
-            if num_columns >= max_columns:
-                flush_table([durations_seconds, durations_minutes, overheads], headers, table_caption)
-                table_caption = None
-                headers, overheads, durations_seconds, durations_minutes, num_columns, remaining_data = \
-                    ["time"], ["overhead"], ["seconds"], ["minutes"], 0, False
-
-        if remaining_data:
-            flush_table([durations_seconds, durations_minutes, overheads], headers, table_caption)
-
-        plot_tests_times(tests)

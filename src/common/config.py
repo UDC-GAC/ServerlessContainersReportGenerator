@@ -27,23 +27,9 @@ import configparser
 import os
 import sys
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
-
-def get_numeric_value(d, key, default, numeric_type):
-    try:
-        return numeric_type(d[key])
-    except KeyError:
-        eprint("Invalid configuration for {0}, using default value '{1}'".format(key, default))
-        return default
-
-
-def get_float_value(d, key, default):
-    return get_numeric_value(d, key, default, float)
-
-
-def get_int_value(d, key, default):
-    return get_numeric_value(d, key, default, int)
 
 
 class ConfigParams:
@@ -138,14 +124,11 @@ class Config:
         "PRINT_NODE_INFO",
         "GENERATE_APP_PLOTS",
         "GENERATE_NODES_PLOTS",
-        "GENERATE_EXPERIMENT_PLOT",
         "GENERATE_USER_PLOTS",
         "PLOTTING_FORMATS",
         "NODES_LIST",
         "APPS_LIST",
         "USERS_LIST",
-        "NUM_BASE_EXPERIMENTS",
-        "TEST_TYPE_STEPPING",
         "PRINT_TEST_BASIC_INFORMATION",
         "STATIC_LIMITS",
         "Y_AMPLIFICATION_FACTOR",
@@ -158,33 +141,41 @@ class Config:
         "DOWNSAMPLE"
     ]
     __default_environment_values = {
-        "NUM_BASE_EXPERIMENTS": 3,
         "MAX_DIFF_TIME": 10,
         "PRINT_MISSING_INFO_REPORT": "true",
         "PRINT_NODE_INFO": "true",
         "GENERATE_APP_PLOTS": "true",
         "GENERATE_NODES_PLOTS": "true",
-        "GENERATE_EXPERIMENT_PLOT": "false",
         "GENERATE_USER_PLOTS": "false",
         "PLOTTING_FORMATS": "svg",
-        "TEST_TYPE_STEPPING": 3,
         "PRINT_TEST_BASIC_INFORMATION": "false",
         "STATIC_LIMITS": "true",
-        "NODES_LIST": "node1,node2,node3,node4,node5,node6,node7,node8,node9",
+        "NODES_LIST": "cont0",
         "USERS_LIST": "user0",
-        "APPS_LIST": "app1",
+        "APPS_LIST": "app0",
         "Y_AMPLIFICATION_FACTOR": 1.2,
         "XLIM": "default:1000",
-        "YLIM": "cpu:default:10000",
+        "YLIM": "cpu:default:1000,mem:default:10000",
         "XTICKS_STEP": 50,
-        "REPORTED_RESOURCES": "cpu,mem",
+        "REPORTED_RESOURCES": "cpu",
         "EXPERIMENT_TYPE": "serverless",
         "PRINT_ENERGY_MAX": "true",
         "DOWNSAMPLE": 5
     }
 
-    __ALLOWED_EXPERIMENT_TYPES = ["serverless", "untreated", "energy"]
-    __DEFAULT_EXPERIMENT_TYPE = "serverless"
+    def get_numeric_value(self, d, key, numeric_type):
+        try:
+            return numeric_type(d[key])
+        except KeyError:
+            default = self.__default_environment_values[key]
+            eprint("Invalid configuration for {0}, using default value '{1}'".format(key, default))
+            return default
+
+    def get_float_value(self, d, key):
+        return self.get_numeric_value(d, key, float)
+
+    def get_int_value(self, d, key):
+        return self.get_numeric_value(d, key, int)
 
     def read_config(self):
         config_dict = {}
@@ -214,14 +205,18 @@ class Config:
         return custom_environment
 
     def __init__(self):
+
+        def strip_quotes(string):
+            return string.rstrip('"').lstrip('"')
+        def parse_val_list(string):
+            return strip_quotes(string).split(",")
+
         ENV = self.create_environment()
 
-        self.REPORTED_RESOURCES = ENV["REPORTED_RESOURCES"].rstrip('"').lstrip('"').split(",")
-        self.MAX_DIFF_TIME = get_int_value(ENV, "MAX_DIFF_TIME", self.__default_environment_values["MAX_DIFF_TIME"])
+        self.EXPERIMENT_TYPE = strip_quotes(ENV["EXPERIMENT_TYPE"])
 
-        self.EXPERIMENT_TYPE = ENV["EXPERIMENT_TYPE"]
-        if self.EXPERIMENT_TYPE not in self.__ALLOWED_EXPERIMENT_TYPES:
-            self.EXPERIMENT_TYPE = self.__DEFAULT_EXPERIMENT_TYPE
+        self.REPORTED_RESOURCES = parse_val_list(ENV["REPORTED_RESOURCES"])
+        self.MAX_DIFF_TIME = self.get_int_value(ENV, "MAX_DIFF_TIME")
 
         self.BDWATCHDOG_USER_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
@@ -238,76 +233,55 @@ class Config:
         if "mem" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_APP_METRICS.append(('structure.mem.current', 'structure'))
             self.BDWATCHDOG_APP_METRICS.append(('structure.mem.usage', 'structure'))
-        if "disk" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_APP_METRICS.append(('structure.disk.current', 'structure'))
-            self.BDWATCHDOG_APP_METRICS.append(('structure.disk.usage', 'structure'))
-        if "net" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_APP_METRICS.append(('structure.net.current', 'structure'))
-            self.BDWATCHDOG_APP_METRICS.append(('structure.net.usage', 'structure'))
         if "energy" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_APP_METRICS.append(('structure.energy.max', 'structure'))
             self.BDWATCHDOG_APP_METRICS.append(('structure.energy.usage', 'structure'))
 
         self.BDWATCHDOG_NODE_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS += [('structure.cpu.current', 'structure'), ('proc.cpu.user', 'host'),
-                                             ('proc.cpu.kernel', 'host'), ('limit.cpu.upper', 'structure'),
-                                             ('limit.cpu.lower', 'structure')]
+            self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.lower', 'structure'))
         if "mem" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS += [('structure.mem.current', 'structure'), ('proc.mem.resident', 'host'),
-                                             ('proc.mem.virtual', 'host'), ('limit.mem.upper', 'structure'),
-                                             ('limit.mem.lower', 'structure')]
-        if "disk" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS += [('structure.disk.current', 'structure'), ('proc.disk.reads.mb', 'host'),
-                                             ('proc.disk.writes.mb', 'host'), ('limit.disk.upper', 'structure'),
-                                             ('limit.disk.lower', 'structure')]
-        if "net" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS += [('structure.net.current', 'structure'), ('proc.net.tcp.out.mb', 'host'),
-                                             ('limit.net.upper', 'structure'), ('limit.net.lower', 'structure'),
-                                             ('proc.net.tcp.in.mb', 'host'), ('structure.energy.usage', 'structure')]
+            self.BDWATCHDOG_NODE_METRICS.append(('structure.mem.current', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.resident', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.virtual', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.upper', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.lower', 'structure'))
         if "energy" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS += [('sys.cpu.energy', 'host')]
+            self.BDWATCHDOG_NODE_METRICS.append(('sys.cpu.energy', 'host'))
 
         self.PRINT_ENERGY_MAX = ENV["PRINT_ENERGY_MAX"] == "true"
         self.PRINTED_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS += ['structure.cpu.current', 'structure.cpu.usage']
-            self.PRINTED_METRICS += ['proc.cpu.user', 'proc.cpu.kernel']
+            self.PRINTED_METRICS.append('structure.cpu.current')
+            self.PRINTED_METRICS.append('structure.cpu.usage')
+            self.PRINTED_METRICS.append('proc.cpu.user')
+            self.PRINTED_METRICS.append('proc.cpu.kernel')
 
         if "mem" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS += ['structure.mem.current', 'structure.mem.usage']
-            self.PRINTED_METRICS += ['proc.mem.resident', 'proc.mem.virtual']
-
-        if "disk" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS += ['structure.disk.current', 'structure.disk.usage']
-            self.PRINTED_METRICS += ['proc.disk.reads.mb', 'proc.disk.writes.mb']
-
-        if "net" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS += ['structure.net.current', 'structure.net.usage']
-            self.PRINTED_METRICS += ['proc.net.tcp.out.mb', 'proc.net.tcp.in.mb']
+            self.PRINTED_METRICS.append('structure.mem.current')
+            self.PRINTED_METRICS.append('structure.mem.usage')
+            self.PRINTED_METRICS.append('proc.mem.resident')
 
         if "energy" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS += ['structure.energy.usage']
-            self.PRINTED_METRICS += ['structure.energy.max']
+            self.PRINTED_METRICS.append('structure.energy.usage')
+            self.PRINTED_METRICS.append('structure.energy.max')
 
         self.MAX_COLUMNS = {"print_test_resources": 5,
                             "print_summarized_tests_info": 8,
                             "print_tests_resource_utilization_report": 8,
                             "print_tests_resource_overhead_report": 8,
-                            "print_tests_by_resource_report": 5,
-                            "print_tests_resource_hysteresis_report": 8,
-                            "print_tests_resource_overhead_report_with_stepping": 6,
-                            "print_tests_resource_utilization_with_stepping": 6}
+                            "print_tests_by_resource_report": 5}
 
         self.STATIC_LIMITS = ENV["STATIC_LIMITS"] == "true"
 
-        self.Y_AMPLIFICATION_FACTOR = get_float_value(ENV, "Y_AMPLIFICATION_FACTOR",
-                                                      self.__default_environment_values["Y_AMPLIFICATION_FACTOR"])
-
-        # self.XLIM = get_int_value(ENV, "XLIM", self.__default_environment_values["XLIM"])
+        self.Y_AMPLIFICATION_FACTOR = self.get_float_value(ENV, "Y_AMPLIFICATION_FACTOR")
 
         self.XLIM = {}
-        for pair in ENV["XLIM"].rstrip('"').lstrip('"').split(","):
+        for pair in parse_val_list(ENV["XLIM"]):
             structure_name, limit = pair.split(":")
             try:
                 self.XLIM[structure_name] = int(limit)
@@ -315,7 +289,7 @@ class Config:
                 pass
 
         self.YLIM = dict()
-        for pair in ENV["YLIM"].rstrip('"').lstrip('"').split(","):
+        for pair in parse_val_list(ENV["YLIM"]):
             resource, structure_name, limit = pair.split(":")
             if resource in ["cpu", "energy"]:
                 try:
@@ -325,31 +299,22 @@ class Config:
                 except ValueError:
                     pass
 
-        self.XTICKS_STEP = get_int_value(ENV, "XTICKS_STEP", self.__default_environment_values["XTICKS_STEP"])
+        self.XTICKS_STEP = self.get_int_value(ENV, "XTICKS_STEP")
 
         self.PRINT_MISSING_INFO_REPORT = ENV["PRINT_MISSING_INFO_REPORT"] == "true"
         self.PRINT_NODE_INFO = ENV["PRINT_NODE_INFO"] == "true"
         self.GENERATE_APP_PLOTS = ENV["GENERATE_APP_PLOTS"] == "true"
         self.GENERATE_NODES_PLOTS = ENV["GENERATE_NODES_PLOTS"] == "true"
-        self.GENERATE_EXPERIMENT_PLOT = ENV["GENERATE_EXPERIMENT_PLOT"] == "true"
         self.GENERATE_USER_PLOTS = ENV["GENERATE_USER_PLOTS"] == "true"
 
         self.PLOTTING_FORMATS = list()
-        plotting_formats = ENV["PLOTTING_FORMATS"].rstrip('"').lstrip('"').split(",")
+        plotting_formats = parse_val_list(ENV["PLOTTING_FORMATS"])
         if "png" in plotting_formats:
             self.PLOTTING_FORMATS.append("png")
         if "svg" in plotting_formats:
             self.PLOTTING_FORMATS.append("svg")
 
-        self.NUM_BASE_EXPERIMENTS = get_int_value(ENV, "NUM_BASE_EXPERIMENTS",
-                                                  self.__default_environment_values["NUM_BASE_EXPERIMENTS"])
-
-        self.TEST_TYPE_STEPPING = get_int_value(ENV, "TEST_TYPE_STEPPING",
-                                                self.__default_environment_values["TEST_TYPE_STEPPING"])
-
-        # self.bdwatchdog_handler = bdwatchdog.BDWatchdog()
-
-        self.DOWNSAMPLE = get_int_value(ENV, "DOWNSAMPLE", self.__default_environment_values["DOWNSAMPLE"])
+        self.DOWNSAMPLE = self.get_int_value(ENV, "DOWNSAMPLE")
 
         self.RESOURCE_UTILIZATION_TUPLES = list()
         if "cpu" in self.REPORTED_RESOURCES:
@@ -385,20 +350,20 @@ class Config:
         if "energy" in self.REPORTED_RESOURCES:
             self.METRICS_TO_CHECK_FOR_MISSING_DATA += [('structure.energy.usage', 'structure')]
 
-        self.METRICS_FOR_OVERHEAD_REPORT = list()
-        if "cpu" in self.REPORTED_RESOURCES:
-            self.METRICS_FOR_OVERHEAD_REPORT += [("cpu used", "structure.cpu.usage"),
-                                                 ("cpu allocated", "structure.cpu.current")]
-        if "mem" in self.REPORTED_RESOURCES:
-            self.METRICS_FOR_OVERHEAD_REPORT += [("mem used", "structure.mem.usage"),
-                                                 ("mem allocated", "structure.mem.current")]
-        if "energy" in self.REPORTED_RESOURCES:
-            self.METRICS_FOR_OVERHEAD_REPORT += [("energy allowed", "structure.energy.max"),
-                                                 ("energy used", "structure.energy.usage")]
+        # self.METRICS_FOR_OVERHEAD_REPORT = list()
+        # if "cpu" in self.REPORTED_RESOURCES:
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("cpu used", "structure.cpu.usage"))
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("cpu allocated", "structure.cpu.current"))
+        # if "mem" in self.REPORTED_RESOURCES:
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("mem used", "structure.mem.usage"))
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("mem allocated", "structure.mem.current"))
+        # if "energy" in self.REPORTED_RESOURCES:
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("energy allowed", "structure.energy.max"))
+        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("energy used", "structure.energy.usage"))
 
         self.PRINT_TEST_BASIC_INFORMATION = ENV["PRINT_TEST_BASIC_INFORMATION"] == "true"
-        self.NODES_LIST = ENV["NODES_LIST"].rstrip('"').lstrip('"').split(",")
+        self.NODES_LIST = parse_val_list(ENV["NODES_LIST"])
 
-        self.APPS_LIST = ENV["APPS_LIST"].rstrip('"').lstrip('"').split(",")
+        self.APPS_LIST = parse_val_list(ENV["APPS_LIST"])
 
-        self.USERS_LIST = ENV["USERS_LIST"].rstrip('"').lstrip('"').split(",")
+        self.USERS_LIST = parse_val_list(ENV["USERS_LIST"])

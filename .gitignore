@@ -1,4 +1,6 @@
 /REPORTS/*
+/src/timeseries_plots/
 .pyc
 **/__pycache__/**
 .idea/
+conf/experiments/report_generator_config.ini
