@@ -121,6 +121,7 @@ class Config:
     __config_keys = [
         "MAX_DIFF_TIME",
         "PRINT_MISSING_INFO_REPORT",
+        "PRINT_TEST_BASIC_INFORMATION",
         "PRINT_NODE_INFO",
         "GENERATE_APP_PLOTS",
         "GENERATE_NODES_PLOTS",
@@ -129,7 +130,6 @@ class Config:
         "NODES_LIST",
         "APPS_LIST",
         "USERS_LIST",
-        "PRINT_TEST_BASIC_INFORMATION",
         "STATIC_LIMITS",
         "Y_AMPLIFICATION_FACTOR",
         "XLIM",
@@ -143,12 +143,12 @@ class Config:
     __default_environment_values = {
         "MAX_DIFF_TIME": 10,
         "PRINT_MISSING_INFO_REPORT": "true",
+        "PRINT_TEST_BASIC_INFORMATION": "false",
         "PRINT_NODE_INFO": "true",
         "GENERATE_APP_PLOTS": "true",
         "GENERATE_NODES_PLOTS": "true",
         "GENERATE_USER_PLOTS": "false",
         "PLOTTING_FORMATS": "svg",
-        "PRINT_TEST_BASIC_INFORMATION": "false",
         "STATIC_LIMITS": "true",
         "NODES_LIST": "cont0",
         "USERS_LIST": "user0",
@@ -221,7 +221,7 @@ class Config:
         self.BDWATCHDOG_USER_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_USER_METRICS.append(('user.cpu.current', 'user'))
-            self.BDWATCHDOG_USER_METRICS.append(('user.cpu.usage', 'user'))
+            self.BDWATCHDOG_USER_METRICS.append(('user.cpu.used', 'user'))
         if "energy" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.max', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.used', 'user'))
@@ -229,46 +229,47 @@ class Config:
         self.BDWATCHDOG_APP_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_APP_METRICS.append(('structure.cpu.current', 'structure'))
-            self.BDWATCHDOG_APP_METRICS.append(('structure.cpu.usage', 'structure'))
+            self.BDWATCHDOG_APP_METRICS.append(('structure.cpu.used', 'structure'))
         if "mem" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_APP_METRICS.append(('structure.mem.current', 'structure'))
-            self.BDWATCHDOG_APP_METRICS.append(('structure.mem.usage', 'structure'))
+            self.BDWATCHDOG_APP_METRICS.append(('structure.mem.used', 'structure'))
         if "energy" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_APP_METRICS.append(('structure.energy.max', 'structure'))
-            self.BDWATCHDOG_APP_METRICS.append(('structure.energy.usage', 'structure'))
+            self.BDWATCHDOG_APP_METRICS.append(('structure.energy.used', 'structure'))
 
-        self.BDWATCHDOG_NODE_METRICS = list()
-        if "cpu" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
-            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
-            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
-            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
-            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.lower', 'structure'))
-        if "mem" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS.append(('structure.mem.current', 'structure'))
-            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.resident', 'host'))
-            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.virtual', 'host'))
-            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.upper', 'structure'))
-            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.lower', 'structure'))
-        if "energy" in self.REPORTED_RESOURCES:
-            self.BDWATCHDOG_NODE_METRICS.append(('sys.cpu.energy', 'host'))
+        # self.BDWATCHDOG_NODE_METRICS = list()
+        # if "cpu" in self.REPORTED_RESOURCES:
+        #     self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.lower', 'structure'))
+        # if "mem" in self.REPORTED_RESOURCES:
+        #     self.BDWATCHDOG_NODE_METRICS.append(('structure.mem.current', 'structure'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.resident', 'host'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.virtual', 'host'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.upper', 'structure'))
+        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.lower', 'structure'))
+        # if "energy" in self.REPORTED_RESOURCES:
+        #     self.BDWATCHDOG_NODE_METRICS.append(('sys.cpu.energy', 'host'))
 
         self.PRINT_ENERGY_MAX = ENV["PRINT_ENERGY_MAX"] == "true"
         self.PRINTED_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
             self.PRINTED_METRICS.append('structure.cpu.current')
-            self.PRINTED_METRICS.append('structure.cpu.usage')
+            self.PRINTED_METRICS.append('structure.cpu.used')
             self.PRINTED_METRICS.append('proc.cpu.user')
             self.PRINTED_METRICS.append('proc.cpu.kernel')
 
         if "mem" in self.REPORTED_RESOURCES:
             self.PRINTED_METRICS.append('structure.mem.current')
-            self.PRINTED_METRICS.append('structure.mem.usage')
+            self.PRINTED_METRICS.append('structure.mem.used')
             self.PRINTED_METRICS.append('proc.mem.resident')
 
         if "energy" in self.REPORTED_RESOURCES:
-            self.PRINTED_METRICS.append('structure.energy.usage')
             self.PRINTED_METRICS.append('structure.energy.max')
+            self.PRINTED_METRICS.append('structure.energy.used')
+
 
         self.MAX_COLUMNS = {"print_test_resources": 5,
                             "print_summarized_tests_info": 8,
@@ -301,11 +302,15 @@ class Config:
 
         self.XTICKS_STEP = self.get_int_value(ENV, "XTICKS_STEP")
 
-        self.PRINT_MISSING_INFO_REPORT = ENV["PRINT_MISSING_INFO_REPORT"] == "true"
         self.PRINT_NODE_INFO = ENV["PRINT_NODE_INFO"] == "true"
+
         self.GENERATE_APP_PLOTS = ENV["GENERATE_APP_PLOTS"] == "true"
         self.GENERATE_NODES_PLOTS = ENV["GENERATE_NODES_PLOTS"] == "true"
         self.GENERATE_USER_PLOTS = ENV["GENERATE_USER_PLOTS"] == "true"
+
+        self.NODES_LIST = parse_val_list(ENV["NODES_LIST"])
+        self.APPS_LIST = parse_val_list(ENV["APPS_LIST"])
+        self.USERS_LIST = parse_val_list(ENV["USERS_LIST"])
 
         self.PLOTTING_FORMATS = list()
         plotting_formats = parse_val_list(ENV["PLOTTING_FORMATS"])
@@ -318,25 +323,21 @@ class Config:
 
         self.RESOURCE_UTILIZATION_TUPLES = list()
         if "cpu" in self.REPORTED_RESOURCES:
-            self.RESOURCE_UTILIZATION_TUPLES.append(("cpu", "structure.cpu.current", "structure.cpu.usage"))
+            self.RESOURCE_UTILIZATION_TUPLES.append(("cpu", "structure.cpu.current", "structure.cpu.used"))
 
         if "mem" in self.REPORTED_RESOURCES:
-            self.RESOURCE_UTILIZATION_TUPLES.append(("mem", "structure.mem.current", "structure.mem.usage"))
+            self.RESOURCE_UTILIZATION_TUPLES.append(("mem", "structure.mem.current", "structure.mem.used"))
 
         if "energy" in self.REPORTED_RESOURCES:
-            self.RESOURCE_UTILIZATION_TUPLES.append(("energy", "structure.energy.max", "structure.energy.usage"))
+            self.RESOURCE_UTILIZATION_TUPLES.append(("energy", "structure.energy.max", "structure.energy.used"))
 
         self.USAGE_METRICS_SOURCE = list()
         if "cpu" in self.REPORTED_RESOURCES:
-            self.USAGE_METRICS_SOURCE.append(("structure.cpu.usage", ['proc.cpu.user', 'proc.cpu.kernel']))
+            self.USAGE_METRICS_SOURCE.append(("structure.cpu.used", ['proc.cpu.user', 'proc.cpu.kernel']))
         if "mem" in self.REPORTED_RESOURCES:
-            self.USAGE_METRICS_SOURCE.append(("structure.mem.usage", ['proc.mem.resident']))
-        if "disk" in self.REPORTED_RESOURCES:
-            self.USAGE_METRICS_SOURCE.append(("structure.disk.usage", ['proc.disk.writes.mb', 'proc.disk.reads.mb']))
-        if "net" in self.REPORTED_RESOURCES:
-            self.USAGE_METRICS_SOURCE.append(("structure.net.usage", ['proc.net.tcp.in.mb', 'proc.net.tcp.out.mb']))
+            self.USAGE_METRICS_SOURCE.append(("structure.mem.used", ['proc.mem.resident']))
         if "energy" in self.REPORTED_RESOURCES:
-            self.USAGE_METRICS_SOURCE.append(("structure.energy.usage", ['sys.cpu.energy']))
+            self.USAGE_METRICS_SOURCE.append(("structure.energy.used", ['sys.cpu.energy']))
 
         self.METRICS_TO_CHECK_FOR_MISSING_DATA = list()
         if "cpu" in self.REPORTED_RESOURCES:
@@ -348,22 +349,9 @@ class Config:
                                                        ('proc.mem.resident', 'host')]
 
         if "energy" in self.REPORTED_RESOURCES:
-            self.METRICS_TO_CHECK_FOR_MISSING_DATA += [('structure.energy.usage', 'structure')]
+            self.METRICS_TO_CHECK_FOR_MISSING_DATA += [('structure.energy.used', 'structure')]
 
-        # self.METRICS_FOR_OVERHEAD_REPORT = list()
-        # if "cpu" in self.REPORTED_RESOURCES:
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("cpu used", "structure.cpu.usage"))
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("cpu allocated", "structure.cpu.current"))
-        # if "mem" in self.REPORTED_RESOURCES:
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("mem used", "structure.mem.usage"))
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("mem allocated", "structure.mem.current"))
-        # if "energy" in self.REPORTED_RESOURCES:
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("energy allowed", "structure.energy.max"))
-        #     self.METRICS_FOR_OVERHEAD_REPORT.append(("energy used", "structure.energy.usage"))
-
+        self.PRINT_MISSING_INFO_REPORT = ENV["PRINT_MISSING_INFO_REPORT"] == "true"
         self.PRINT_TEST_BASIC_INFORMATION = ENV["PRINT_TEST_BASIC_INFORMATION"] == "true"
-        self.NODES_LIST = parse_val_list(ENV["NODES_LIST"])
 
-        self.APPS_LIST = parse_val_list(ENV["APPS_LIST"])
 
-        self.USERS_LIST = parse_val_list(ENV["USERS_LIST"])

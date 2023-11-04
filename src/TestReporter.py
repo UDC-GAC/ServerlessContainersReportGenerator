@@ -26,12 +26,11 @@ from __future__ import print_function
 
 from src.opentsdb import bdwatchdog
 from src.common.config import Config, OpenTSDBConfig, eprint
-from src.latex.latex_output import latex_print, print_latex_stress
+from src.latex.latex_output import latex_print, print_latex_stress, flush_table, print_basic_doc_info
 
-from src.lineplotting.lineplots import plot_test
+from src.lineplotting.lineplots import plot_test_doc
 
-from src.common.utils import generate_duration, translate_metric, format_metric, flush_table, \
-    print_basic_doc_info, generate_resources_timeseries, get_plots_metrics
+from src.common.utils import generate_duration, translate_metric, format_metric, generate_resources_timeseries, get_plots_metrics
 
 
 class TestReporter:
@@ -52,23 +51,22 @@ class TestReporter:
             if "end_time" not in test or "start_time" not in test:
                 return
 
-            start, end = test["start_time"], test["end_time"]
             plots = get_plots_metrics()
 
             if self.cfg.GENERATE_NODES_PLOTS:
-                for node in self.cfg.NODES_LIST:
-                    test_plots = plots["node"][report_type]
-                    plot_test(test, node, "node", test_plots, start, end, self.cfg.REPORTED_RESOURCES)
+                test_plots = plots["node"][report_type]
+                for node_name in self.cfg.NODES_LIST:
+                    plot_test_doc(test, node_name, "node", test_plots, self.cfg.REPORTED_RESOURCES)
 
             if self.cfg.GENERATE_APP_PLOTS:
-                for app in self.cfg.APPS_LIST + ["ALL"]:
-                    app_plots = plots["app"][report_type]
-                    plot_test(test, app, "app", app_plots, start, end, self.cfg.REPORTED_RESOURCES)
+                app_plots = plots["app"][report_type]
+                for app_name in self.cfg.APPS_LIST:
+                    plot_test_doc(test, app_name, "app", app_plots, self.cfg.REPORTED_RESOURCES)
 
             if self.cfg.GENERATE_USER_PLOTS:
-                for user in self.cfg.USERS_LIST + ["ALL"]:
-                    user_plots = plots["user"][report_type]
-                    plot_test(test, user, "user", user_plots, start, end, self.cfg.REPORTED_RESOURCES)
+                user_plots = plots["user"][report_type]
+                for user_name in self.cfg.USERS_LIST:
+                    plot_test_doc(test, user_name, "user", user_plots, self.cfg.REPORTED_RESOURCES)
 
     # PRINT TEST RESOURCE USAGES
     def print_test_resources(self, test, structures_list):
@@ -168,7 +166,7 @@ class TestReporter:
                         timeseries = None
                     if bool(timeseries):
                         structure_misses_list = self.bdwatchdog_handler.perform_check_for_missing_metric_info(
-                            timeseries)
+                            timeseries, self.cfg.MAX_DIFF_TIME)
                         if not structure_misses_list:
                             continue
                     else:
@@ -180,7 +178,8 @@ class TestReporter:
                     misses[metric_name][structure] = structure_misses_list
 
             if misses:
-                print("\\textbf{TEST:}" + " {0}".format(test["test_name"]))
+                latex_print("\\textbf{TEST:} " + test["test_name"])
+                latex_print("&nbsp;")
 
                 aggregated_misses = dict()
                 for metric in misses:
@@ -205,6 +204,7 @@ class TestReporter:
                         "Silence of {0} seconds at for ALL nodes accounting for a total of {1:.2f}\%".format(
                             total_missed_time,
                             float(100 * total_missed_time / (len(structures_list) * test["duration"]))))
+                    latex_print("&nbsp;")
                 latex_print("&nbsp;")
 
     def print_tests_resource_usage(self, tests):
@@ -245,21 +245,18 @@ class TestReporter:
             self.flush_rows_with_aggregations(rows, headers, table_caption)
 
     def print_test_report(self, tests):
-        print_node_info = self.cfg.PRINT_NODE_INFO
-        # PRINT BASIC INFO ABOUT THE TEST
+
         for test in tests:
             print_basic_doc_info(test)
 
-            # PRINT SPECIFIC RESOURCE INFO FOR EVERY NODE (OPTIONAL) AND FOR THE AGGREGATION
-            if print_node_info:
-                structures_list = list()
-                for node in self.cfg.NODES_LIST:
-                    structures_list.append(node)
-                self.print_test_resources(test, structures_list)
-                print("")
+            rows = list()
+            if self.cfg.PRINT_NODE_INFO:
+                rows += self.cfg.NODES_LIST
 
-            structures_list = ["ALL"] + self.cfg.APPS_LIST
-            self.print_test_resources(test, structures_list)
+            rows += self.cfg.APPS_LIST
+            rows += ["ALL"]
+
+            self.print_test_resources(test, rows)
             print("")
 
     def print_tests_times(self, tests):

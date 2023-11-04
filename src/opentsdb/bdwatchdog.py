@@ -58,7 +58,7 @@ class BDWatchdog:
             else:
                 self.get_points(query, tries)
 
-    def get_structure_timeseries(self, structure_name, start, end, retrieve_metrics, downsample=5):
+    def get_timeseries(self, structure_name, start, end, retrieve_metrics, downsample=5):
         usages = dict()
         subquery = list()
         for metric in retrieve_metrics:
@@ -117,7 +117,7 @@ class BDWatchdog:
         return misses
 
     @staticmethod
-    def perform_structure_metrics_aggregations(start, end, metrics):
+    def aggregate_metrics(start, end, metrics):
         usages = dict()
         for metric in metrics:
             summatory = 0

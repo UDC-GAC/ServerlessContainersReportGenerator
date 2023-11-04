@@ -25,16 +25,15 @@ from __future__ import print_function
 import sys
 import time
 
-from src.lineplotting.lineplots import plot_test, plot_user
 from src.common.config import Config, MongoDBConfig, eprint
 
-from src.latex.latex_output import print_latex_section
+from src.latex.latex_output import print_latex_section, print_basic_doc_info
 from src.TestReporter import TestReporter
 from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
-from src.common.utils import generate_duration, print_basic_doc_info, generate_resources_timeseries, nowt
+from src.common.utils import generate_duration, generate_resources_timeseries, nowt
 
 
-class ExperimentReporter():
+class ExperimentReporter:
     def __init__(self):
         self.cfg = Config()
         mongoDBConfig = MongoDBConfig()
@@ -44,11 +43,11 @@ class ExperimentReporter():
         testRepo = TestReporter()
 
         test_reports = [
-            ("Resource usages", testRepo.print_tests_resource_usage, True),
             ("Tests durations", testRepo.print_tests_times, True),
+            ("Resource usages", testRepo.print_tests_resource_usage, True),
+            ("Resource utilization", testRepo.print_tests_resource_utilization, True),
             ("Tests basic information", testRepo.print_test_report, self.cfg.PRINT_TEST_BASIC_INFORMATION),
             ("Missing information report", testRepo.report_resources_missing_data, self.cfg.PRINT_MISSING_INFO_REPORT),
-            ("Resource utilization", testRepo.print_tests_resource_utilization, True),
         ]
 
         for report in test_reports:

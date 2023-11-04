@@ -24,111 +24,111 @@
 from __future__ import print_function
 
 import pathlib
-import sys
 import time
-from tabulate import tabulate
 
 from src.opentsdb import bdwatchdog
-from src.common.config import OpenTSDBConfig
-from src.latex.latex_output import latex_print
+from src.common.config import OpenTSDBConfig, eprint
 from src.common.config import Config
 
 # initialize the OpenTSDB handler
-bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
+bdw = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
 # Get the config
 cfg = Config()
 
 
-# Generate the resource information of both tests and experiments
+# Generate the resource information
 def generate_resources_timeseries(document, cfg):
     #  Check that the needed start and end time are present, otherwise abort
     if "end_time" not in document or "start_time" not in document:
         document["resource_aggregates"] = "n/a"
+        eprint("Missing 'start_time' or 'end_time' for document".format(document["experiment_id"]))
         return document
 
-    # Initialize variables
-    document["resource_aggregates"], document["resources"], document["users"] = dict(), dict(), dict()
     start, end = document["start_time"], document["end_time"]
 
+    document["users"] = dict()
     for user in cfg.USERS_LIST:
-        document["users"][user] = \
-            bdwatchdog_handler.get_structure_timeseries(user, start, end, cfg.BDWATCHDOG_USER_METRICS,
-                                                        downsample=cfg.DOWNSAMPLE)
-        # TODO rename this function or create a get_user_timeseries
+        document["users"][user] = bdw.get_timeseries(
+            user, start, end, cfg.BDWATCHDOG_USER_METRICS, downsample=cfg.DOWNSAMPLE)
 
     # Retrieve the timeseries from OpenTSDB and perform the per-structure aggregations
     # Slow loop due to network call
+    document["resources"] = dict()
     for node_name in cfg.NODES_LIST:
-        document["resources"][node_name] = \
-            bdwatchdog_handler.get_structure_timeseries(node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS,
-                                                        downsample=cfg.DOWNSAMPLE)
+        document["resources"][node_name] = bdw.get_timeseries(
+            node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS, downsample=cfg.DOWNSAMPLE)
 
-        metrics_to_agregate = document["resources"][node_name]
-        document["resource_aggregates"][node_name] = \
-            bdwatchdog_handler.perform_structure_metrics_aggregations(start, end, metrics_to_agregate)
-
-    # Generate the per-node time series 'usage' metrics (e.g., structure.cpu.usage)
+    # Generate the aggregations of the retrieved resource metrics
+    document["resource_aggregates"] = dict()
     for node_name in cfg.NODES_LIST:
-        for agg_metric in cfg.USAGE_METRICS_SOURCE:
-            agg_metric_name, metric_list = agg_metric
-            metrics_to_agregate = document["resources"][node_name]
+        node_metrics = document["resources"][node_name]
+        document["resource_aggregates"][node_name] = bdw.aggregate_metrics(start, end, node_metrics)
 
+    # Generate the per-node 'usage' time series (e.g., structure.cpu.used)
+    for node_name in cfg.NODES_LIST:
+        node_metrics = document["resources"][node_name]
+        for (usage_metric, source_metrics) in cfg.USAGE_METRICS_SOURCE:
             # Initialize
-            if agg_metric_name not in metrics_to_agregate:
-                metrics_to_agregate[agg_metric_name] = dict()
+            if usage_metric not in node_metrics:
+                node_metrics[usage_metric] = dict()
 
             # Get the first metric as the time reference, considering that all metrics should have
-            # the same timestamps
-            first_metric = metrics_to_agregate[metric_list[0]]
+            # the same timestamps (they should be time-aligned)
+            first_metric = node_metrics[source_metrics[0]]
             for time_point in first_metric:
+
+                # Initialize
+                node_metrics[usage_metric][time_point] = 0
+
                 # Iterate through the metrics
-                for metric in metric_list:
+                for metric in source_metrics:
                     # Timestamp from the first 'reference' metric is not present in other metric,
                     # this may be due to the head and tail data points of the time series
-                    if time_point not in metrics_to_agregate[metric]:
+                    if time_point not in node_metrics[metric]:
                         continue
-                    # Initialize
-                    if time_point not in metrics_to_agregate[agg_metric_name]:
-                        metrics_to_agregate[agg_metric_name][time_point] = 0
-
                     # Sum
-                    metrics_to_agregate[agg_metric_name][time_point] += \
-                        metrics_to_agregate[metric][time_point]
+                    node_metrics[usage_metric][time_point] += node_metrics[metric][time_point]
 
-    # Generate the per-node aggregated 'usage' metrics (e.g., structure.cpu.usage)
+    # Generate the per-node 'usage' aggregations
     for node_name in cfg.NODES_LIST:
-        for agg_metric in cfg.USAGE_METRICS_SOURCE:
-            agg_metric_name, metrics_to_aggregate = agg_metric
+        for (usage_metric, metrics_to_aggregate) in cfg.USAGE_METRICS_SOURCE:
             aggregates = document["resource_aggregates"][node_name]
 
             # Initialize
-            if agg_metric_name not in aggregates:
-                aggregates[agg_metric_name] = {"SUM": 0, "AVG": 0}
+            if usage_metric not in aggregates:
+                aggregates[usage_metric] = {"SUM": 0, "AVG": 0}
 
             # Add up to create the SUM
+            sum = 0
             for metric in metrics_to_aggregate:
-                aggregates[agg_metric_name]["SUM"] += aggregates[metric]["SUM"]
+                sum += aggregates[metric]["SUM"]
+            aggregates[usage_metric]["SUM"] = sum
 
             # Create the AVG from the SUM
-            aggregates[agg_metric_name]["AVG"] = aggregates[agg_metric_name]["SUM"] / document["duration"]
+            aggregates[usage_metric]["AVG"] = sum / document["duration"]
 
-    # Generate the ALL pseudo-metrics for the overall application (all the container nodes)
+    # Generate the 'ALL' pseudo-metrics for all the container nodes
     document["resources"]["ALL"] = dict()
     for node_name in cfg.NODES_LIST:
         for metric in document["resources"][node_name]:
+
+                # If the first node, set the timeseries as base
             if metric not in document["resources"]["ALL"]:
                 document["resources"]["ALL"][metric] = document["resources"][node_name][metric]
-                continue
+            else:
 
-            for time_point in document["resources"][node_name][metric]:
-                try:
-                    document["resources"]["ALL"][metric][time_point] += \
-                        document["resources"][node_name][metric][time_point]
-                except KeyError:
-                    pass
+                # For the next nodes, add them up point by point
+                doc_metric = document["resources"]["ALL"][metric]
+                node_metric = document["resources"][node_name][metric]
 
-    # Generate the aggregated ALL pseudo-metrics for the overall application (all the container nodes)
+                for time_point in node_metric:
+                    try:
+                        doc_metric[time_point] += node_metric[time_point]
+                    except KeyError:
+                        pass
+
+    # Generate the 'ALL' pseudo-metrics aggregations
     document["resource_aggregates"]["ALL"] = dict()
     for node_name in cfg.NODES_LIST:
         for metric in document["resource_aggregates"][node_name]:
@@ -148,12 +148,11 @@ def generate_resources_timeseries(document, cfg):
                 metric_global_aggregates[aggregation] += node_agg_metric[aggregation]
 
     for app in cfg.APPS_LIST:
-        document["resources"][app] = \
-            bdwatchdog_handler.get_structure_timeseries(app, start, end, cfg.BDWATCHDOG_APP_METRICS,
-                                                        downsample=cfg.DOWNSAMPLE)
+        document["resources"][app] = bdw.get_timeseries(
+            app, start, end, cfg.BDWATCHDOG_APP_METRICS, downsample=cfg.DOWNSAMPLE)
 
-        document["resource_aggregates"][app] = \
-            bdwatchdog_handler.perform_structure_metrics_aggregations(start, end, document["resources"][app])
+        document["resource_aggregates"][app] = bdw.aggregate_metrics(
+            start, end, document["resources"][app])
 
     # This metric is manually added because container structures do not have it, only application structures
     if "energy" in cfg.REPORTED_RESOURCES:
@@ -180,29 +179,9 @@ def generate_duration(document):
     document["duration"] = "n/a"
     if "end_time" in document and "start_time" in document:
         document["duration"] = document["end_time"] - document["start_time"]
-    return document
-
-
-# PRINT EXPERIMENT OR TEST DOCUMENT INFORMATION
-def print_basic_doc_info(doc):
-    start_time_string, end_time_string, duration, duration_minutes = get_times_from_doc(doc)
-    if "test_name" in doc:
-        latex_print("\\textbf{TEST:}" + " {0}".format(doc["test_name"]))
     else:
-        latex_print("\\textbf{EXPERIMENT:}" + " {0}".format(doc["experiment_id"]))
-        latex_print("\\textbf{USER:}" + "{0}".format(doc["username"]))
-
-    latex_print("\\textbf{START TIME:}" + " {0}".format(start_time_string))
-    latex_print("\\textbf{END TIME:}" + " {0}".format(end_time_string))
-    latex_print("\\textbf{DURATION:}" + " {0} seconds (about {1} minutes)".format(duration, duration_minutes) + "  ")
-
-
-def flush_table(table, header, table_caption=None):
-    # print_latex_vertical_space()
-    print(tabulate(table, header))
-    print("")
-    if table_caption:
-        latex_print("Table: " + table_caption)
+        eprint("Missing 'start_time' or 'end_time' for document {0}".format(document["experiment_id"]))
+    return document
 
 
 def create_output_directory(figure_filepath_directory):
@@ -217,7 +196,7 @@ def get_plots():
     plots["user"]["serverless"] = {"cpu": [], "energy": []}
     plots["user"]["energy"] = {"cpu": [], "energy": []}
 
-    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.usage', 'structure')]
+    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
     plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
 
@@ -231,18 +210,17 @@ def get_plots():
     plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
     plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
-    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')]
+    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
     plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
     plots["app"]["energy"]["cpu"] = plots["app"]["untreated"]["cpu"]
 
-    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure')]
+    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
-
     if cfg.PRINT_ENERGY_MAX:
         plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
-    plots["app"]["untreated"]["energy"].append(('structure.energy.usage', 'structure'))
+    plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
     plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
 
@@ -252,22 +230,22 @@ def get_plots():
     plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
     plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
-    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')
+    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')
                                          # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host')
                                          ]
-    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure'),
+    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure'),
                                           # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host'),
                                           ('limit.cpu.lower', 'structure'), ('limit.cpu.upper', 'structure')]
     plots["node"]["energy"]["cpu"] = plots["node"]["untreated"]["cpu"]
 
-    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure')]
+    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
     # ('proc.mem.resident', 'host')]
-    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure'),
+    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure'),
                                           ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
     # ('proc.mem.resident', 'host'),
     plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
 
-    plots["node"]["energy"]["energy"] = [('structure.energy.usage', 'structure')]
+    plots["node"]["energy"]["energy"] = [('structure.energy.used', 'structure')]
 
     return plots
 
@@ -321,7 +299,7 @@ def get_plots_metrics():
     plots["user"]["energy"] = {"cpu": [], "energy": []}
     plots["user"]["serverless"] = {"cpu": [], "energy": []}
 
-    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.usage', 'structure')]
+    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
     plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
 
@@ -335,17 +313,17 @@ def get_plots_metrics():
     plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
     plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
-    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')]
+    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
     plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
     plots["app"]["energy"]["cpu"] = plots["app"]["untreated"]["cpu"]
 
-    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure')]
+    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
     if cfg.PRINT_ENERGY_MAX:
         plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
-    plots["app"]["untreated"]["energy"].append(('structure.energy.usage', 'structure'))
+    plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
     plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
 
@@ -355,22 +333,19 @@ def get_plots_metrics():
     plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
     plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
 
-    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure')
-                                         # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host')
-                                         ]
-    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.usage', 'structure'),
-                                          # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host'),
+    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
+    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure'),
                                           ('limit.cpu.lower', 'structure'), ('limit.cpu.upper', 'structure')]
     plots["node"]["energy"]["cpu"] = plots["node"]["untreated"]["cpu"]
 
-    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure')]
+    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
     # ('proc.mem.resident', 'host')]
-    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.usage', 'structure'),
+    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure'),
                                           ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
     # ('proc.mem.resident', 'host'),
     plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
 
-    plots["node"]["energy"]["energy"] = [('structure.energy.usage', 'structure')]
+    plots["node"]["energy"]["energy"] = [('structure.energy.used', 'structure')]
 
     return plots
 
@@ -400,7 +375,7 @@ def translate_metric(metric):
         else:
             translated_metric.append(measure_kind)
     elif metric_type == "structure":
-        if measure_kind == "usage":
+        if measure_kind == "used":
             # translated_metric.append("{0} used".format(resource))
             translated_metric.append("Used".format(resource))
         elif measure_kind == "current":

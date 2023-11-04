@@ -37,6 +37,7 @@ cfg = Config()
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
+
 def rebase_ts_values(resource, timeseries):
     if resource == "mem":
         # Translate from MiB to GiB
@@ -45,9 +46,14 @@ def rebase_ts_values(resource, timeseries):
         y = list(map(lambda point: int(point), timeseries.values()))
     return y
 
-def plot_test(test, doc, type, plots, start_time, end_time, plotted_resources):
 
-    doc_name = doc["name"]
+def plot_test_doc(test, doc_name, doc_type, plots, plotted_resources):
+    start_time, end_time = test["start_time"], test["end_time"]
+    test_name = test["test_name"]
+    if doc_type == "user":
+        doc_resources = test["users"][doc_name]
+    else:
+        doc_resources = test["resources"][doc_name]
 
     for resource in plots:
         if resource not in plotted_resources:
@@ -62,7 +68,7 @@ def plot_test(test, doc, type, plots, start_time, end_time, plotted_resources):
                 break
 
         if empty_plot:
-            eprint("Plot '{0}' for doc '{1}' has no data, skipping".format(resource, "??"))
+            eprint("In test '{0}' plot '{1}' for doc '{2}' has no data, skipping".format(test_name, resource, doc_name))
             continue
 
         fig = plt.figure(figsize=TIMESERIES_FIGURE_SIZE)
@@ -152,13 +158,13 @@ def plot_test(test, doc, type, plots, start_time, end_time, plotted_resources):
             plt.xticks(np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP))
 
         # Save the plots
-        figure_filepath_directory = "{0}/{1}".format("timeseries_plots", doc_name)
+        figure_filepath_directory = "{0}/{1}/{2}".format("timeseries_plots", test_name, doc_name)
         if "svg" in cfg.PLOTTING_FORMATS:
-            figure_name = "{0}_{1}.{2}".format(structure_name, resource, "svg")
+            figure_name = "{0}_{1}.{2}".format(doc_name, resource, "svg")
             save_figure(figure_filepath_directory, figure_name, fig, format="svg")
 
         if "png" in cfg.PLOTTING_FORMATS:
-            figure_name = "{0}_{1}.{2}".format(structure_name, resource, "png")
+            figure_name = "{0}_{1}.{2}".format(doc_name, resource, "png")
             save_figure(figure_filepath_directory, figure_name, fig, format="png")
 
         plt.close()
