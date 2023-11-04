@@ -237,21 +237,21 @@ class Config:
             self.BDWATCHDOG_APP_METRICS.append(('structure.energy.max', 'structure'))
             self.BDWATCHDOG_APP_METRICS.append(('structure.energy.used', 'structure'))
 
-        # self.BDWATCHDOG_NODE_METRICS = list()
-        # if "cpu" in self.REPORTED_RESOURCES:
-        #     self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.lower', 'structure'))
-        # if "mem" in self.REPORTED_RESOURCES:
-        #     self.BDWATCHDOG_NODE_METRICS.append(('structure.mem.current', 'structure'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.resident', 'host'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.virtual', 'host'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.upper', 'structure'))
-        #     self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.lower', 'structure'))
-        # if "energy" in self.REPORTED_RESOURCES:
-        #     self.BDWATCHDOG_NODE_METRICS.append(('sys.cpu.energy', 'host'))
+        self.BDWATCHDOG_NODE_METRICS = list()
+        if "cpu" in self.REPORTED_RESOURCES:
+            self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.lower', 'structure'))
+        if "mem" in self.REPORTED_RESOURCES:
+            self.BDWATCHDOG_NODE_METRICS.append(('structure.mem.current', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.resident', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('proc.mem.virtual', 'host'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.upper', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('limit.mem.lower', 'structure'))
+        if "energy" in self.REPORTED_RESOURCES:
+            self.BDWATCHDOG_NODE_METRICS.append(('sys.cpu.energy', 'host'))
 
         self.PRINT_ENERGY_MAX = ENV["PRINT_ENERGY_MAX"] == "true"
         self.PRINTED_METRICS = list()
