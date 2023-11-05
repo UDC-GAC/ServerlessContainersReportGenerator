@@ -126,16 +126,23 @@ class BDWatchdog:
                 # Perform the integration through trapezoidal steps
                 previous_time = int(points[0][0])
                 previous_value = points[0][1]
+                max_value = points[0][1]
+                min_value = points[0][1]
                 for point in points[1:]:
                     time = int(point[0])
                     value = point[1]
                     diff_time = time - previous_time
                     added_value = value + previous_value
                     summatory += (added_value / 2) * diff_time
+                    max_value = max(max_value, value)
+                    min_value = min(min_value, value)
                     previous_time = time
                     previous_value = value
             average = summatory / (end - start)
             usages[metric] = dict()
             usages[metric]["AVG"] = average
             usages[metric]["SUM"] = summatory
+            usages[metric]["MAX"] = max_value
+            usages[metric]["MIN"] = min_value
+            usages[metric]["DIFF_MAX_MIN"] = usages[metric]["MAX"] - usages[metric]["MIN"]
         return usages

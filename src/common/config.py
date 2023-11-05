@@ -143,11 +143,11 @@ class Config:
     __default_environment_values = {
         "MAX_DIFF_TIME": 10,
         "PRINT_MISSING_INFO_REPORT": "true",
-        "PRINT_TEST_BASIC_INFORMATION": "false",
+        "PRINT_TEST_BASIC_INFORMATION": "true",
         "PRINT_NODE_INFO": "true",
         "GENERATE_APP_PLOTS": "true",
         "GENERATE_NODES_PLOTS": "true",
-        "GENERATE_USER_PLOTS": "false",
+        "GENERATE_USER_PLOTS": "true",
         "PLOTTING_FORMATS": "svg",
         "STATIC_LIMITS": "true",
         "NODES_LIST": "cont0",
@@ -222,6 +222,10 @@ class Config:
         if "cpu" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_USER_METRICS.append(('user.cpu.current', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.cpu.used', 'user'))
+        if "accounting" in self.REPORTED_RESOURCES:
+            self.BDWATCHDOG_USER_METRICS.append(('user.accounting.coins', 'user'))
+            self.BDWATCHDOG_USER_METRICS.append(('user.accounting.max_debt', 'user'))
+            self.BDWATCHDOG_USER_METRICS.append(('user.accounting.min_balance', 'user'))
         if "energy" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.max', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.used', 'user'))
@@ -265,6 +269,11 @@ class Config:
             self.PRINTED_METRICS.append('structure.mem.current')
             self.PRINTED_METRICS.append('structure.mem.used')
             self.PRINTED_METRICS.append('proc.mem.resident')
+
+        if "accounting" in self.REPORTED_RESOURCES:
+            self.PRINTED_METRICS.append('user.accounting.coins')
+            self.PRINTED_METRICS.append('user.accounting.min_balance')
+            self.PRINTED_METRICS.append('user.accounting.max_debt')
 
         if "energy" in self.REPORTED_RESOURCES:
             self.PRINTED_METRICS.append('structure.energy.max')

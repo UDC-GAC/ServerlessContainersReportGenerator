@@ -56,17 +56,17 @@ class TestReporter:
             if self.cfg.GENERATE_NODES_PLOTS:
                 test_plots = plots["node"][report_type]
                 for node_name in self.cfg.NODES_LIST:
-                    plot_test_doc(test, node_name, "node", test_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, node_name, test_plots, self.cfg.REPORTED_RESOURCES)
 
             if self.cfg.GENERATE_APP_PLOTS:
                 app_plots = plots["app"][report_type]
                 for app_name in self.cfg.APPS_LIST:
-                    plot_test_doc(test, app_name, "app", app_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, app_name, app_plots, self.cfg.REPORTED_RESOURCES)
 
             if self.cfg.GENERATE_USER_PLOTS:
                 user_plots = plots["user"][report_type]
                 for user_name in self.cfg.USERS_LIST:
-                    plot_test_doc(test, user_name, "user", user_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, user_name, user_plots, self.cfg.REPORTED_RESOURCES)
 
     # PRINT TEST RESOURCE USAGES
     def print_test_resources(self, test, structures_list):
@@ -84,7 +84,7 @@ class TestReporter:
                 if structure_name not in rows:
                     rows[structure_name] = dict()
 
-                for agg in ["SUM", "AVG"]:
+                for agg in ["SUM", "AVG", "MAX", "MIN", "DIFF_MAX_MIN"]:
                     if agg not in rows[structure_name]:
                         rows[structure_name][agg] = [structure_name, agg]
 
@@ -253,8 +253,11 @@ class TestReporter:
             if self.cfg.PRINT_NODE_INFO:
                 rows += self.cfg.NODES_LIST
 
-            rows += self.cfg.APPS_LIST
             rows += ["ALL"]
+
+            rows += self.cfg.APPS_LIST
+
+            rows += self.cfg.USERS_LIST
 
             self.print_test_resources(test, rows)
             print("")

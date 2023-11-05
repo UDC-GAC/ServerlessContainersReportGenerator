@@ -1,4 +1,3 @@
-
 OVERHEAD_VALUE_SIZE = 10
 TIMESERIES_FIGURE_SIZE = (8, 2.1)
 LEGEND_FONTSIZE = "medium"
@@ -18,7 +17,11 @@ line_marker = {
         "structure.mem.used": "o",
         "limit.mem.lower": "v",
         "limit.mem.upper": "^",
-        "proc.mem.resident": "o"},
+        "proc.mem.resident": "o"
+    },
+    "accounting": {
+        "user.accounting.coins": "x"
+    },
     "energy": {
         "structure.energy.max": "x",
         "structure.energy.used": "o",
@@ -37,13 +40,18 @@ line_style = {
         "limit.cpu.lower": "--",
         "limit.cpu.upper": "--",
         "proc.cpu.user": "-",
-        "proc.cpu.kernel": "-"},
+        "proc.cpu.kernel": "-"
+    },
     "mem": {
         "structure.mem.current": "-",
         "structure.mem.used": "-",
         "limit.mem.lower": "--",
         "limit.mem.upper": "--",
-        "proc.mem.resident": "-"},
+        "proc.mem.resident": "-"
+    },
+    "accounting": {
+        "user.accounting.coins": "-"
+    },
     "energy": {
         "structure.energy.max": "-",
         "structure.energy.used": "-",

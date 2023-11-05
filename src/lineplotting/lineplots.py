@@ -47,13 +47,10 @@ def rebase_ts_values(resource, timeseries):
     return y
 
 
-def plot_test_doc(test, doc_name, doc_type, plots, plotted_resources):
+def plot_test_doc(test, doc_name, plots, plotted_resources):
     start_time, end_time = test["start_time"], test["end_time"]
     test_name = test["test_name"]
-    if doc_type == "user":
-        doc_resources = test["users"][doc_name]
-    else:
-        doc_resources = test["resources"][doc_name]
+    doc_resources = test["resources"][doc_name]
 
     for resource in plots:
         if resource not in plotted_resources:

@@ -47,11 +47,6 @@ def generate_resources_timeseries(document, cfg):
 
     start, end = document["start_time"], document["end_time"]
 
-    document["users"] = dict()
-    for user in cfg.USERS_LIST:
-        document["users"][user] = bdw.get_timeseries(
-            user, start, end, cfg.BDWATCHDOG_USER_METRICS, downsample=cfg.DOWNSAMPLE)
-
     # Retrieve the timeseries from OpenTSDB and perform the per-structure aggregations
     # Slow loop due to network call
     document["resources"] = dict()
@@ -153,6 +148,14 @@ def generate_resources_timeseries(document, cfg):
 
         document["resource_aggregates"][app] = bdw.aggregate_metrics(
             start, end, document["resources"][app])
+
+
+    for user in cfg.USERS_LIST:
+        document["resources"][user] = bdw.get_timeseries(
+            user, start, end, cfg.BDWATCHDOG_USER_METRICS, downsample=cfg.DOWNSAMPLE)
+
+        document["resource_aggregates"][user] = bdw.aggregate_metrics(
+            start, end, document["resources"][user])
 
     # This metric is manually added because container structures do not have it, only application structures
     if "energy" in cfg.REPORTED_RESOURCES:
@@ -259,7 +262,7 @@ def save_figure(figure_filepath_directory, figure_name, figure, format="svg"):
 
 
 def format_metric(value, label, aggregation):
-    if aggregation == "AVG":
+    if aggregation == "AVG" or label.startswith("user.accounting"):
         number_format = "{:.2f}"
     else:
         number_format = "{:.0f}"
@@ -276,6 +279,8 @@ def format_metric(value, label, aggregation):
         if value >= 10000:
             value = value / 1000
         formatted_metric = "{0} KJoule".format(number_format.format(value))
+    elif label.startswith("user.accounting"):
+        formatted_metric = "{0} GRC".format(number_format.format(value))
     else:
         formatted_metric = value
 
@@ -295,13 +300,16 @@ def get_plots_metrics():
     plots = dict()
     plots["user"] = dict()
 
-    plots["user"]["untreated"] = {"cpu": [], "energy": []}
+    plots["user"]["untreated"] = {"cpu": [], "accounting": [], "energy": []}
     plots["user"]["energy"] = {"cpu": [], "energy": []}
-    plots["user"]["serverless"] = {"cpu": [], "energy": []}
+    plots["user"]["serverless"] = {"cpu": [],  "accounting": [], "energy": []}
 
     plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
     plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
+
+    plots["user"]["untreated"]["accounting"] = [('user.accounting.coins', 'user')]
+    plots["user"]["serverless"]["accounting"] = plots["user"]["untreated"]["accounting"]
 
     plots["user"]["untreated"]["energy"] = [('user.energy.max', 'user'), ('user.energy.used', 'user')]
     plots["user"]["serverless"]["energy"] = plots["user"]["untreated"]["energy"]
