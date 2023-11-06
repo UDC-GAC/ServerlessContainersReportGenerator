@@ -22,11 +22,8 @@
 
 
 from __future__ import print_function
-import sys
-import time
 
 from src.common.config import Config, MongoDBConfig, eprint
-
 from src.latex.latex_output import print_latex_section, print_basic_doc_info
 from src.TestReporter import TestReporter
 from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
@@ -34,20 +31,20 @@ from src.common.utils import generate_duration, generate_resources_timeseries, n
 
 
 class ExperimentReporter:
-    def __init__(self):
-        self.cfg = Config()
+    def __init__(self, experiment_name):
+        self.cfg = Config(experiment_name)
         mongoDBConfig = MongoDBConfig()
         self.timestampingAgent = MongoDBTimestampAgent(mongoDBConfig.get_config_as_dict())
+        self.testRepo = TestReporter(self.cfg)
 
     def report_tests(self, processed_tests):
-        testRepo = TestReporter()
-
         test_reports = [
-            ("Tests durations", testRepo.print_tests_times, True),
-            ("Resource usages", testRepo.print_tests_resource_usage, True),
-            ("Resource utilization", testRepo.print_tests_resource_utilization, True),
-            ("Tests basic information", testRepo.print_test_report, self.cfg.PRINT_TEST_BASIC_INFORMATION),
-            ("Missing information report", testRepo.report_resources_missing_data, self.cfg.PRINT_MISSING_INFO_REPORT),
+            ("Tests durations", self.testRepo.print_tests_times, True),
+            ("Resource usages", self.testRepo.print_tests_resource_usage, True),
+            ("Resource utilization", self.testRepo.print_tests_resource_utilization, True),
+            ("Tests basic information", self.testRepo.print_test_report, self.cfg.PRINT_TEST_BASIC_INFORMATION),
+            ("Missing information report", self.testRepo.report_resources_missing_data,
+             self.cfg.PRINT_MISSING_INFO_REPORT),
         ]
 
         for report in test_reports:
@@ -59,11 +56,9 @@ class ExperimentReporter:
 
         if self.cfg.GENERATE_APP_PLOTS or self.cfg.GENERATE_NODES_PLOTS:
             eprint("Plotting resource plots for at {0}".format(nowt()))
-            testRepo.generate_test_resource_plot(processed_tests)
-
+            self.testRepo.generate_test_resource_plot(processed_tests)
 
     def report_experiment(self, experiment):
-        testRepo = TestReporter()
 
         # Get the timeseries and compute durations for the experiment
         eprint("Generating experiment info at {0}".format(nowt()))
@@ -76,7 +71,7 @@ class ExperimentReporter:
         tests = self.timestampingAgent.get_experiment_tests(experiment["experiment_id"], experiment["username"])
 
         # Get the timeseries and compute durations for the tests
-        processed_tests = list(testRepo.get_test_data(test) for test in tests)
+        processed_tests = list(self.testRepo.get_test_data(test) for test in tests)
 
         # Print the basic tests info
         self.report_tests(processed_tests)

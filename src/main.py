@@ -31,7 +31,6 @@ from TimestampsSnitch.src.mongodb.mongodb_agent import MongoDBTimestampAgent
 
 mongoDBConfig = MongoDBConfig()
 timestampingAgent = MongoDBTimestampAgent(mongoDBConfig.get_config_as_dict())
-experimentReporter = ExperimentReporter()
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -40,6 +39,6 @@ if __name__ == '__main__':
         experiment_name = sys.argv[1]
         experiment = timestampingAgent.get_experiment(experiment_name, mongoDBConfig.get_username())
         if experiment:
-            experimentReporter.report_experiment(experiment)
+            ExperimentReporter(experiment_name).report_experiment(experiment)
         else:
             eprint("Experiment '{0}' not found".format(experiment_name))

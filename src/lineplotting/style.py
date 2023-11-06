@@ -20,7 +20,9 @@ line_marker = {
         "proc.mem.resident": "o"
     },
     "accounting": {
-        "user.accounting.coins": "x"
+        "user.accounting.coins": "x",
+        "user.accounting.min_balance": "x",
+        "user.accounting.max_debt": "x"
     },
     "energy": {
         "structure.energy.max": "x",
@@ -50,7 +52,9 @@ line_style = {
         "proc.mem.resident": "-"
     },
     "accounting": {
-        "user.accounting.coins": "-"
+        "user.accounting.coins": "-",
+        "user.accounting.max_debt": "-",
+        "user.accounting.min_balance": "-"
     },
     "energy": {
         "structure.energy.max": "-",

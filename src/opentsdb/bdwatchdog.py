@@ -138,11 +138,11 @@ class BDWatchdog:
                     min_value = min(min_value, value)
                     previous_time = time
                     previous_value = value
-            average = summatory / (end - start)
-            usages[metric] = dict()
-            usages[metric]["AVG"] = average
-            usages[metric]["SUM"] = summatory
-            usages[metric]["MAX"] = max_value
-            usages[metric]["MIN"] = min_value
-            usages[metric]["DIFF_MAX_MIN"] = usages[metric]["MAX"] - usages[metric]["MIN"]
+                average = summatory / (end - start)
+                usages[metric] = dict()
+                usages[metric]["AVG"] = average
+                usages[metric]["SUM"] = summatory
+                usages[metric]["MAX"] = max_value
+                usages[metric]["MIN"] = min_value
+                usages[metric]["DIFF_MAX_MIN"] = usages[metric]["MAX"] - usages[metric]["MIN"]
         return usages

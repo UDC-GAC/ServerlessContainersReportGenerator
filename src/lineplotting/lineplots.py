@@ -22,6 +22,8 @@
 
 from __future__ import print_function
 
+import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -30,9 +32,6 @@ from src.lineplotting.utils import translate_plot_name_to_ylabel
 from src.lineplotting.style import line_style, dashes_dict, line_marker, TIMESERIES_FIGURE_SIZE, LEGEND_FONTSIZE
 from src.common.config import Config, OpenTSDBConfig, eprint
 from src.common.utils import translate_metric, save_figure
-
-# Get the config
-cfg = Config()
 
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
@@ -47,20 +46,20 @@ def rebase_ts_values(resource, timeseries):
     return y
 
 
-def plot_test_doc(test, doc_name, plots, plotted_resources):
+def plot_test_doc(test, doc_name, plots, cfg):
     start_time, end_time = test["start_time"], test["end_time"]
     test_name = test["test_name"]
-    doc_resources = test["resources"][doc_name]
+    doc_ts = test["timeseries"][doc_name]
 
     for resource in plots:
-        if resource not in plotted_resources:
+        if resource not in cfg.REPORTED_RESOURCES:
             continue
 
         # Pre-Check for empty plot (no timeseries for all the metrics)
         empty_plot = True
         for metric in plots[resource]:
             metric_name = metric[0]
-            if metric_name in doc_resources and doc_resources[metric_name]:
+            if metric_name in doc_ts and doc_ts[metric_name]:
                 empty_plot = False
                 break
 
@@ -83,16 +82,18 @@ def plot_test_doc(test, doc_name, plots, plotted_resources):
                 max_y_ts_point_value = cfg.YLIM[doc_name][resource]
         else:
             max_y_ts_point_value, max_x_ts_point_value = 0, 0
+
+        min_y_ts_point_value = 0
         ###########################################################
 
         for metric in plots[resource]:
             metric_name = metric[0]
 
             # Get the time series data
-            if metric_name not in doc_resources or not doc_resources[metric_name]:
+            if metric_name not in doc_ts or not doc_ts[metric_name]:
                 continue
 
-            timeseries = doc_resources[metric_name]
+            timeseries = doc_ts[metric_name]
 
             # This was done for users, for some reason
             # timeseries = bdwatchdog_handler.perform_timeseries_range_apply(timeseries, 0, None)
@@ -105,9 +106,10 @@ def plot_test_doc(test, doc_name, plots, plotted_resources):
             # Get the time series points and rebase them if necessary
             y = rebase_ts_values(resource, timeseries)
 
-            # Set the maximum time series  time and value points
+            # Set the maximum and minimum time series time and value points
             max_y_ts_point_value = max(max_y_ts_point_value, max(y))
             max_x_ts_point_value = max(max_x_ts_point_value, max(x))
+            min_y_ts_point_value = min(min_y_ts_point_value, min(y))
 
             # Get the line style
             linestyle = line_style[resource][metric_name]
@@ -122,12 +124,13 @@ def plot_test_doc(test, doc_name, plots, plotted_resources):
                      )
 
         # Set x and y limits
-        top, bottom = max_y_ts_point_value, 0
+        top, bottom = max_y_ts_point_value, min_y_ts_point_value
         left, right = -30, max_x_ts_point_value + 30
 
         # If not static limits apply an amplification factor or the max timeseries value will be at the plot "ceiling"
         if not cfg.STATIC_LIMITS:
-            top = int(float(top * cfg.Y_AMPLIFICATION_FACTOR))
+            top = int(top * cfg.Y_AMPLIFICATION_FACTOR)
+            bottom -= abs(math.floor(bottom * (cfg.Y_AMPLIFICATION_FACTOR-1)))
 
         plt.xlim(left=left, right=right)
         plt.ylim(top=top, bottom=bottom)
@@ -155,7 +158,7 @@ def plot_test_doc(test, doc_name, plots, plotted_resources):
             plt.xticks(np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP))
 
         # Save the plots
-        figure_filepath_directory = "{0}/{1}/{2}".format("timeseries_plots", test_name, doc_name)
+        figure_filepath_directory = "{0}/{1}".format("timeseries_plots", test_name)
         if "svg" in cfg.PLOTTING_FORMATS:
             figure_name = "{0}_{1}.{2}".format(doc_name, resource, "svg")
             save_figure(figure_filepath_directory, figure_name, fig, format="svg")

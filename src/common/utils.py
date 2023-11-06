@@ -28,20 +28,17 @@ import time
 
 from src.opentsdb import bdwatchdog
 from src.common.config import OpenTSDBConfig, eprint
-from src.common.config import Config
 
 # initialize the OpenTSDB handler
 bdw = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
 # Get the config
-cfg = Config()
-
 
 # Generate the resource information
 def generate_resources_timeseries(document, cfg):
     #  Check that the needed start and end time are present, otherwise abort
     if "end_time" not in document or "start_time" not in document:
-        document["resource_aggregates"] = "n/a"
+        document["aggregates"] = "n/a"
         eprint("Missing 'start_time' or 'end_time' for document".format(document["experiment_id"]))
         return document
 
@@ -49,20 +46,22 @@ def generate_resources_timeseries(document, cfg):
 
     # Retrieve the timeseries from OpenTSDB and perform the per-structure aggregations
     # Slow loop due to network call
-    document["resources"] = dict()
+    document["timeseries"] = dict()
+    doc_timeseries = document["timeseries"]
     for node_name in cfg.NODES_LIST:
-        document["resources"][node_name] = bdw.get_timeseries(
+        doc_timeseries[node_name] = bdw.get_timeseries(
             node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS, downsample=cfg.DOWNSAMPLE)
 
     # Generate the aggregations of the retrieved resource metrics
-    document["resource_aggregates"] = dict()
+    document["aggregates"] = dict()
+    doc_aggregates = document["aggregates"]
     for node_name in cfg.NODES_LIST:
-        node_metrics = document["resources"][node_name]
-        document["resource_aggregates"][node_name] = bdw.aggregate_metrics(start, end, node_metrics)
+        node_metrics = doc_timeseries[node_name]
+        doc_aggregates[node_name] = bdw.aggregate_metrics(start, end, node_metrics)
 
     # Generate the per-node 'usage' time series (e.g., structure.cpu.used)
     for node_name in cfg.NODES_LIST:
-        node_metrics = document["resources"][node_name]
+        node_metrics = doc_timeseries[node_name]
         for (usage_metric, source_metrics) in cfg.USAGE_METRICS_SOURCE:
             # Initialize
             if usage_metric not in node_metrics:
@@ -88,7 +87,7 @@ def generate_resources_timeseries(document, cfg):
     # Generate the per-node 'usage' aggregations
     for node_name in cfg.NODES_LIST:
         for (usage_metric, metrics_to_aggregate) in cfg.USAGE_METRICS_SOURCE:
-            aggregates = document["resource_aggregates"][node_name]
+            aggregates = doc_aggregates[node_name]
 
             # Initialize
             if usage_metric not in aggregates:
@@ -104,18 +103,18 @@ def generate_resources_timeseries(document, cfg):
             aggregates[usage_metric]["AVG"] = sum / document["duration"]
 
     # Generate the 'ALL' pseudo-metrics for all the container nodes
-    document["resources"]["ALL"] = dict()
+    doc_timeseries["ALL"] = dict()
     for node_name in cfg.NODES_LIST:
-        for metric in document["resources"][node_name]:
+        for metric in doc_timeseries[node_name]:
 
-                # If the first node, set the timeseries as base
-            if metric not in document["resources"]["ALL"]:
-                document["resources"]["ALL"][metric] = document["resources"][node_name][metric]
+            # If the first node, set the timeseries as base
+            if metric not in doc_timeseries["ALL"]:
+                doc_timeseries["ALL"][metric] = doc_timeseries[node_name][metric]
             else:
 
                 # For the next nodes, add them up point by point
-                doc_metric = document["resources"]["ALL"][metric]
-                node_metric = document["resources"][node_name][metric]
+                doc_metric = doc_timeseries["ALL"][metric]
+                node_metric = doc_timeseries[node_name][metric]
 
                 for time_point in node_metric:
                     try:
@@ -124,15 +123,15 @@ def generate_resources_timeseries(document, cfg):
                         pass
 
     # Generate the 'ALL' pseudo-metrics aggregations
-    document["resource_aggregates"]["ALL"] = dict()
+    doc_aggregates["ALL"] = dict()
     for node_name in cfg.NODES_LIST:
-        for metric in document["resource_aggregates"][node_name]:
+        for metric in doc_aggregates[node_name]:
             # Initialize
-            if metric not in document["resource_aggregates"]["ALL"]:
-                document["resource_aggregates"]["ALL"][metric] = dict()
+            if metric not in doc_aggregates["ALL"]:
+                doc_aggregates["ALL"][metric] = dict()
 
-            metric_global_aggregates = document["resource_aggregates"]["ALL"][metric]
-            node_agg_metric = document["resource_aggregates"][node_name][metric]
+            metric_global_aggregates = doc_aggregates["ALL"][metric]
+            node_agg_metric = doc_aggregates[node_name][metric]
 
             for aggregation in node_agg_metric:
                 # Initialize
@@ -143,37 +142,29 @@ def generate_resources_timeseries(document, cfg):
                 metric_global_aggregates[aggregation] += node_agg_metric[aggregation]
 
     for app in cfg.APPS_LIST:
-        document["resources"][app] = bdw.get_timeseries(
-            app, start, end, cfg.BDWATCHDOG_APP_METRICS, downsample=cfg.DOWNSAMPLE)
-
-        document["resource_aggregates"][app] = bdw.aggregate_metrics(
-            start, end, document["resources"][app])
-
+        doc_timeseries[app] = bdw.get_timeseries(app, start, end, cfg.BDWATCHDOG_APP_METRICS, downsample=cfg.DOWNSAMPLE)
+        doc_aggregates[app] = bdw.aggregate_metrics(start, end, doc_timeseries[app])
 
     for user in cfg.USERS_LIST:
-        document["resources"][user] = bdw.get_timeseries(
-            user, start, end, cfg.BDWATCHDOG_USER_METRICS, downsample=cfg.DOWNSAMPLE)
-
-        document["resource_aggregates"][user] = bdw.aggregate_metrics(
-            start, end, document["resources"][user])
+        doc_timeseries[user] = bdw.get_timeseries(user, start, end, cfg.BDWATCHDOG_USER_METRICS,
+                                                  downsample=cfg.DOWNSAMPLE)
+        doc_aggregates[user] = bdw.aggregate_metrics(start, end, doc_timeseries[user])
 
     # This metric is manually added because container structures do not have it, only application structures
     if "energy" in cfg.REPORTED_RESOURCES:
-        document["resource_aggregates"]["ALL"]["structure.energy.max"] = {"SUM": 0, "AVG": 0}
-        document["resources"]["ALL"]["structure.energy.max"] = {}
+        doc_aggregates["ALL"]["structure.energy.max"] = {"SUM": 0, "AVG": 0}
+        doc_timeseries["ALL"]["structure.energy.max"] = {}
         for app in cfg.APPS_LIST:
-            for time_point in document["resources"][app]["structure.energy.max"]:
+            for time_point in doc_timeseries[app]["structure.energy.max"]:
                 try:
-                    document["resources"]["ALL"]["structure.energy.max"][time_point] += \
-                        document["resources"][app]["structure.energy.max"][time_point]
+                    doc_timeseries["ALL"]["structure.energy.max"][time_point] += \
+                        doc_timeseries[app]["structure.energy.max"][time_point]
                 except KeyError:
-                    document["resources"]["ALL"]["structure.energy.max"][time_point] = \
-                        document["resources"][app]["structure.energy.max"][time_point]
+                    doc_timeseries["ALL"]["structure.energy.max"][time_point] = \
+                        doc_timeseries[app]["structure.energy.max"][time_point]
 
-            document["resource_aggregates"]["ALL"]["structure.energy.max"]["SUM"] += \
-                document["resource_aggregates"][app]["structure.energy.max"]["SUM"]
-            document["resource_aggregates"]["ALL"]["structure.energy.max"]["AVG"] += \
-                document["resource_aggregates"][app]["structure.energy.max"]["AVG"]
+            doc_aggregates["ALL"]["structure.energy.max"]["SUM"] += doc_aggregates[app]["structure.energy.max"]["SUM"]
+            doc_aggregates["ALL"]["structure.energy.max"]["AVG"] += doc_aggregates[app]["structure.energy.max"]["AVG"]
 
     return document
 
@@ -221,8 +212,7 @@ def get_plots():
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
-    if cfg.PRINT_ENERGY_MAX:
-        plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
+    plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
     plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
     plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
@@ -302,13 +292,13 @@ def get_plots_metrics():
 
     plots["user"]["untreated"] = {"cpu": [], "accounting": [], "energy": []}
     plots["user"]["energy"] = {"cpu": [], "energy": []}
-    plots["user"]["serverless"] = {"cpu": [],  "accounting": [], "energy": []}
+    plots["user"]["serverless"] = {"cpu": [], "accounting": [], "energy": []}
 
     plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
     plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
 
-    plots["user"]["untreated"]["accounting"] = [('user.accounting.coins', 'user')]
+    plots["user"]["untreated"]["accounting"] = [('user.accounting.coins', 'user'),('user.accounting.max_debt', 'user'),('user.accounting.min_balance', 'user')]
     plots["user"]["serverless"]["accounting"] = plots["user"]["untreated"]["accounting"]
 
     plots["user"]["untreated"]["energy"] = [('user.energy.max', 'user'), ('user.energy.used', 'user')]
@@ -329,8 +319,7 @@ def get_plots_metrics():
     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
 
-    if cfg.PRINT_ENERGY_MAX:
-        plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
+    plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
     plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
     plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
@@ -432,3 +421,5 @@ def get_times_from_doc(doc):
 
 def nowt():
     return time.strftime("%D %H:%M:%S", time.localtime())
+
+

@@ -25,18 +25,17 @@ from __future__ import print_function
 
 
 from src.opentsdb import bdwatchdog
-from src.common.config import Config, OpenTSDBConfig, eprint
+from src.common.config import OpenTSDBConfig, eprint
 from src.latex.latex_output import latex_print, print_latex_stress, flush_table, print_basic_doc_info
-
 from src.lineplotting.lineplots import plot_test_doc
-
-from src.common.utils import generate_duration, translate_metric, format_metric, generate_resources_timeseries, get_plots_metrics
+from src.common.utils import generate_duration, translate_metric, format_metric, generate_resources_timeseries, \
+    get_plots_metrics
 
 
 class TestReporter:
-    def __init__(self):
+    def __init__(self, cfg):
         # Get the config
-        self.cfg = Config()
+        self.cfg = cfg
         self.bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
     def get_test_data(self, test):
@@ -56,21 +55,21 @@ class TestReporter:
             if self.cfg.GENERATE_NODES_PLOTS:
                 test_plots = plots["node"][report_type]
                 for node_name in self.cfg.NODES_LIST:
-                    plot_test_doc(test, node_name, test_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, node_name, test_plots, self.cfg)
 
             if self.cfg.GENERATE_APP_PLOTS:
                 app_plots = plots["app"][report_type]
                 for app_name in self.cfg.APPS_LIST:
-                    plot_test_doc(test, app_name, app_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, app_name, app_plots, self.cfg)
 
             if self.cfg.GENERATE_USER_PLOTS:
                 user_plots = plots["user"][report_type]
                 for user_name in self.cfg.USERS_LIST:
-                    plot_test_doc(test, user_name, user_plots, self.cfg.REPORTED_RESOURCES)
+                    plot_test_doc(test, user_name, user_plots, self.cfg)
 
     # PRINT TEST RESOURCE USAGES
     def print_test_resources(self, test, structures_list):
-        if not test["resource_aggregates"] or test["resource_aggregates"] == "n/a":
+        if not test["aggregates"] or test["aggregates"] == "n/a":
             latex_print("RESOURCE INFO NOT AVAILABLE")
             return
 
@@ -90,8 +89,7 @@ class TestReporter:
 
                     try:
                         rows[structure_name][agg].append(
-                            format_metric(test["resource_aggregates"][structure_name][metric_name][agg], metric_name,
-                                          agg))
+                            format_metric(test["aggregates"][structure_name][metric_name][agg], metric_name, agg))
                     except KeyError:
                         rows[structure_name][agg].append("n/a")
 
@@ -124,12 +122,12 @@ class TestReporter:
                 resource, current, usage = resource_tuple
                 if resource not in rows:
                     rows[resource] = [resource]
-                if test["resource_aggregates"] == "n/a":
+                if test["aggregates"] == "n/a":
                     rows[resource].append("n/a")
                 else:
                     try:
-                        available = test["resource_aggregates"]["ALL"][current]["SUM"]
-                        used = test["resource_aggregates"]["ALL"][usage]["SUM"]
+                        available = test["aggregates"]["ALL"][current]["SUM"]
+                        used = test["aggregates"]["ALL"][usage]["SUM"]
                         if available <= 0:
                             raise KeyError
                         else:
@@ -160,8 +158,8 @@ class TestReporter:
             for metric in self.cfg.METRICS_TO_CHECK_FOR_MISSING_DATA:
                 metric_name = metric[0]
                 for structure in structures_list:
-                    if metric_name in test["resources"][structure]:
-                        timeseries = test["resources"][structure][metric_name]
+                    if metric_name in test["timeseries"][structure]:
+                        timeseries = test["timeseries"][structure][metric_name]
                     else:
                         timeseries = None
                     if bool(timeseries):
@@ -225,12 +223,12 @@ class TestReporter:
                     if agg not in rows[resource]:
                         rows[resource][agg] = [translate_metric(resource), agg]
 
-                    if test["resource_aggregates"] == "n/a":
+                    if test["aggregates"] == "n/a":
                         rows[resource][agg].append("n/a")
                     else:
                         try:
                             rows[resource][agg].append(
-                                format_metric(test["resource_aggregates"]["ALL"][resource][agg], resource, agg))
+                                format_metric(test["aggregates"]["ALL"][resource][agg], resource, agg))
                         except KeyError:
                             rows[resource][agg].append("n/a")
 

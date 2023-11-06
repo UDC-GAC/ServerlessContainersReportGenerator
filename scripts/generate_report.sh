@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-if [[ -z ${1} ]];
+if [[ -z ${2} ]];
 then
-	echo "The name of the experiment to generate is needed"
+	echo "2 arguments are needed"
+	echo " + The name of the experiment to generate is needed"
+	echo " + The path to the configuration file to use"
 	exit 1
 fi
 
@@ -16,6 +18,7 @@ LATEX_TEMPLATE=${REPORT_GENERATOR_PATH}/latex/simple_report.template
 OUTPUT_REPORTS_FOLDER=$REPORT_GENERATOR_PATH/REPORTS
 
 mkdir -p ${OUTPUT_REPORTS_FOLDER}/$1
+cp $2 ${OUTPUT_REPORTS_FOLDER}/$1
 cd ${OUTPUT_REPORTS_FOLDER}/$1
 
 echo "Generating report for experiment $1"

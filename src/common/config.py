@@ -28,10 +28,6 @@ import os
 import sys
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
 class ConfigParams:
     base_path = os.path.dirname(os.path.abspath(__file__))
     config_path = "../../conf/config.ini"
@@ -117,7 +113,7 @@ class MongoDBConfig(DatabaseConfig):
 
 class Config:
     __base_path = os.path.dirname(os.path.abspath(__file__))
-    __config_path = "../../conf/report_generator_config.ini"
+    __config_path = None
     __config_keys = [
         "MAX_DIFF_TIME",
         "PRINT_MISSING_INFO_REPORT",
@@ -149,15 +145,15 @@ class Config:
         "GENERATE_NODES_PLOTS": "true",
         "GENERATE_USER_PLOTS": "true",
         "PLOTTING_FORMATS": "svg",
-        "STATIC_LIMITS": "true",
-        "NODES_LIST": "cont0",
-        "USERS_LIST": "user0",
-        "APPS_LIST": "app0",
+        "STATIC_LIMITS": "false",
+        "NODES_LIST": "cont1",
+        "USERS_LIST": "user1",
+        "APPS_LIST": "app1",
         "Y_AMPLIFICATION_FACTOR": 1.2,
         "XLIM": "default:1000",
-        "YLIM": "cpu:default:1000,mem:default:10000",
+        "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20",
         "XTICKS_STEP": 50,
-        "REPORTED_RESOURCES": "cpu",
+        "REPORTED_RESOURCES": "cpu,accounting",
         "EXPERIMENT_TYPE": "serverless",
         "PRINT_ENERGY_MAX": "true",
         "DOWNSAMPLE": 5
@@ -177,15 +173,14 @@ class Config:
     def get_int_value(self, d, key):
         return self.get_numeric_value(d, key, int)
 
-    def read_config(self):
+    def read_config(self, experiment_name):
         config_dict = {}
         config = configparser.ConfigParser()
+        self.__config_path = "../../REPORTS/{0}/report_generator_config.ini".format(experiment_name)
         config_file_path = os.path.join(self.__base_path, self.__config_path)
-
-        try:
-            config.read(config_file_path)
-        except (IOError, FileNotFoundError):
-            print('Config file does not exist or is not accessible')
+        success = config.read(config_file_path)
+        if not success:
+            eprint('Config file does not exist or is not accessible, will use default values', "blue")
 
         for key in self.__config_keys:
             try:
@@ -194,9 +189,9 @@ class Config:
                 pass  # Key is not configured, leave it
         return config_dict
 
-    def create_environment(self):
+    def create_environment(self, experiment_name):
         custom_environment = os.environ.copy()
-        config_dict = self.read_config()
+        config_dict = self.read_config(experiment_name)
         for key in self.__config_keys:
             if key in config_dict.keys():
                 custom_environment[key] = config_dict[key]
@@ -204,14 +199,14 @@ class Config:
                 custom_environment[key] = self.__default_environment_values[key]
         return custom_environment
 
-    def __init__(self):
+    def __init__(self, experiment_name):
 
         def strip_quotes(string):
             return string.rstrip('"').lstrip('"')
         def parse_val_list(string):
             return strip_quotes(string).split(",")
 
-        ENV = self.create_environment()
+        ENV = self.create_environment(experiment_name)
 
         self.EXPERIMENT_TYPE = strip_quotes(ENV["EXPERIMENT_TYPE"])
 
@@ -364,3 +359,5 @@ class Config:
         self.PRINT_TEST_BASIC_INFORMATION = ENV["PRINT_TEST_BASIC_INFORMATION"] == "true"
 
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
