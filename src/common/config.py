@@ -26,6 +26,7 @@ from __future__ import print_function
 import configparser
 import os
 import sys
+import time
 
 
 class ConfigParams:
@@ -130,11 +131,15 @@ class Config:
         "Y_AMPLIFICATION_FACTOR",
         "XLIM",
         "YLIM",
+        "YMIN",
         "XTICKS_STEP",
+        "FIGURE_SIZE_X",
+        "FIGURE_SIZE_Y",
         "REPORTED_RESOURCES",
         "EXPERIMENT_TYPE",
         "PRINT_ENERGY_MAX",
-        "DOWNSAMPLE"
+        "DOWNSAMPLE",
+        "BUCKET"
     ]
     __default_environment_values = {
         "MAX_DIFF_TIME": 10,
@@ -151,12 +156,16 @@ class Config:
         "APPS_LIST": "app1",
         "Y_AMPLIFICATION_FACTOR": 1.2,
         "XLIM": "default:1000",
-        "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20",
+        "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20,tasks:default:20",
+        "YMIN": "cpu:default:0,mem:default:0,accounting:default:0,tasks:default:0",
         "XTICKS_STEP": 50,
-        "REPORTED_RESOURCES": "cpu,accounting",
+        "FIGURE_SIZE_X" : 8,
+        "FIGURE_SIZE_Y": 3,
+        "REPORTED_RESOURCES": "cpu",
         "EXPERIMENT_TYPE": "serverless",
         "PRINT_ENERGY_MAX": "true",
-        "DOWNSAMPLE": 5
+        "DOWNSAMPLE": 5,
+        "BUCKET": "genomics"
     }
 
     def get_numeric_value(self, d, key, numeric_type):
@@ -221,6 +230,9 @@ class Config:
             self.BDWATCHDOG_USER_METRICS.append(('user.accounting.coins', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.accounting.max_debt', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.accounting.min_balance', 'user'))
+        if "tasks" in self.REPORTED_RESOURCES:
+            self.BDWATCHDOG_USER_METRICS.append(('bucket.tasks.input', 'bucket'))
+            self.BDWATCHDOG_USER_METRICS.append(('bucket.tasks.processing', 'bucket'))
         if "energy" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.max', 'user'))
             self.BDWATCHDOG_USER_METRICS.append(('user.energy.used', 'user'))
@@ -239,6 +251,7 @@ class Config:
         self.BDWATCHDOG_NODE_METRICS = list()
         if "cpu" in self.REPORTED_RESOURCES:
             self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.current', 'structure'))
+            self.BDWATCHDOG_NODE_METRICS.append(('structure.cpu.max', 'structure'))
             self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.user', 'host'))
             self.BDWATCHDOG_NODE_METRICS.append(('proc.cpu.kernel', 'host'))
             self.BDWATCHDOG_NODE_METRICS.append(('limit.cpu.upper', 'structure'))
@@ -270,6 +283,10 @@ class Config:
             self.PRINTED_METRICS.append('user.accounting.min_balance')
             self.PRINTED_METRICS.append('user.accounting.max_debt')
 
+        if "tasks" in self.REPORTED_RESOURCES:
+            self.PRINTED_METRICS.append('bucket.tasks.input')
+            self.PRINTED_METRICS.append('bucket.tasks.processing')
+
         if "energy" in self.REPORTED_RESOURCES:
             self.PRINTED_METRICS.append('structure.energy.max')
             self.PRINTED_METRICS.append('structure.energy.used')
@@ -296,15 +313,27 @@ class Config:
         self.YLIM = dict()
         for pair in parse_val_list(ENV["YLIM"]):
             resource, structure_name, limit = pair.split(":")
-            if resource in ["cpu", "energy"]:
-                try:
-                    if structure_name not in self.YLIM:
-                        self.YLIM[structure_name] = dict()
-                    self.YLIM[structure_name][resource] = int(limit)
-                except ValueError:
-                    pass
+            try:
+                if structure_name not in self.YLIM:
+                    self.YLIM[structure_name] = dict()
+                self.YLIM[structure_name][resource] = int(limit)
+            except ValueError:
+                pass
+
+        self.YMIN = dict()
+        for pair in parse_val_list(ENV["YMIN"]):
+            resource, structure_name, limit = pair.split(":")
+            try:
+                if structure_name not in self.YMIN:
+                    self.YMIN[structure_name] = dict()
+                self.YMIN[structure_name][resource] = int(limit)
+            except ValueError:
+                pass
 
         self.XTICKS_STEP = self.get_int_value(ENV, "XTICKS_STEP")
+
+        self.FIGURE_SIZE_X = self.get_float_value(ENV, "FIGURE_SIZE_X")
+        self.FIGURE_SIZE_Y = self.get_float_value(ENV, "FIGURE_SIZE_Y")
 
         self.PRINT_NODE_INFO = ENV["PRINT_NODE_INFO"] == "true"
 
@@ -359,5 +388,11 @@ class Config:
         self.PRINT_TEST_BASIC_INFORMATION = ENV["PRINT_TEST_BASIC_INFORMATION"] == "true"
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+        # FIX for buckets
+        self.BUCKET = strip_quotes(ENV["BUCKET"])
+
+def eprint(message):
+    print("[{0}] {1}".format(nowt(), message), file=sys.stderr)
+
+def nowt():
+    return time.strftime("%D %H:%M:%S", time.localtime())

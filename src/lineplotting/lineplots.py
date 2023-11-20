@@ -28,22 +28,33 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.opentsdb import bdwatchdog
-from src.lineplotting.utils import translate_plot_name_to_ylabel
-from src.lineplotting.style import line_style, dashes_dict, line_marker, TIMESERIES_FIGURE_SIZE, LEGEND_FONTSIZE
-from src.common.config import Config, OpenTSDBConfig, eprint
+from src.lineplotting.style import line_style, dashes_dict, line_marker, LEGEND_FONTSIZE, LINE_MARK_EVERY
+from src.common.config import OpenTSDBConfig, eprint
 from src.common.utils import translate_metric, save_figure
 
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
+def translate_plot_name_to_ylabel(plot_name):
+    if plot_name == "cpu":
+        return "CPU (shares)"
+    elif plot_name == "mem":
+        return "Memory (GiB)"
+    elif plot_name == "accounting":
+        return "Accounting"
+    elif plot_name == "tasks":
+        return "Tasks"
+    elif plot_name == "energy":
+        return "Energy (J)"
+    else:
+        return plot_name
 
 def rebase_ts_values(resource, timeseries):
     if resource == "mem":
         # Translate from MiB to GiB
-        y = list(map(lambda point: int(point / 1024), timeseries.values()))
+        return list(map(lambda point: int(point / 1024), timeseries.values()))
     else:
-        y = list(map(lambda point: int(point), timeseries.values()))
-    return y
+        return timeseries.values()
 
 
 def plot_test_doc(test, doc_name, plots, cfg):
@@ -67,7 +78,7 @@ def plot_test_doc(test, doc_name, plots, cfg):
             eprint("In test '{0}' plot '{1}' for doc '{2}' has no data, skipping".format(test_name, resource, doc_name))
             continue
 
-        fig = plt.figure(figsize=TIMESERIES_FIGURE_SIZE)
+        fig = plt.figure(figsize=(cfg.FIGURE_SIZE_X, cfg.FIGURE_SIZE_Y))
         ax1 = fig.add_subplot(111)
 
         # Values used for setting the X and Y limits, without depending on actual time series values ####
@@ -78,12 +89,13 @@ def plot_test_doc(test, doc_name, plots, cfg):
                 max_x_ts_point_value = cfg.XLIM[doc_name]
             if doc_name not in cfg.YLIM or resource not in cfg.YLIM[doc_name]:
                 max_y_ts_point_value = cfg.YLIM["default"][resource]
+                min_y_ts_point_value = cfg.YMIN["default"][resource]
             else:
                 max_y_ts_point_value = cfg.YLIM[doc_name][resource]
+                min_y_ts_point_value = cfg.YMIN[doc_name][resource]
         else:
             max_y_ts_point_value, max_x_ts_point_value = 0, 0
 
-        min_y_ts_point_value = 0
         ###########################################################
 
         for metric in plots[resource]:
@@ -115,12 +127,12 @@ def plot_test_doc(test, doc_name, plots, cfg):
             linestyle = line_style[resource][metric_name]
 
             ax1.plot(x, y,
-                     label=translate_metric(metric_name),
+                     label=translate_metric(metric_name, test_name),
                      linestyle=linestyle,
                      dashes=dashes_dict[linestyle],
                      marker=line_marker[resource][metric_name],
-                     markersize=6,
-                     markevery=5
+                     markersize=5,
+                     markevery=LINE_MARK_EVERY
                      )
 
         # Set x and y limits
@@ -129,11 +141,16 @@ def plot_test_doc(test, doc_name, plots, cfg):
 
         # If not static limits apply an amplification factor or the max timeseries value will be at the plot "ceiling"
         if not cfg.STATIC_LIMITS:
-            top = int(top * cfg.Y_AMPLIFICATION_FACTOR)
+            top = math.ceil(top * cfg.Y_AMPLIFICATION_FACTOR)
             bottom -= abs(math.floor(bottom * (cfg.Y_AMPLIFICATION_FACTOR-1)))
 
         plt.xlim(left=left, right=right)
         plt.ylim(top=top, bottom=bottom)
+
+        if bottom < 0:
+            # Make the 0 line thicker
+            ax1.axhline(linewidth=1.5, color="red")
+            # ax1.axvline(linewidth=1, color="k")
 
         # Set properties to the whole plot
         plt.xlabel('Time(s)', fontsize=11)

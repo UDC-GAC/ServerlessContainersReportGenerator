@@ -18,7 +18,7 @@ LATEX_TEMPLATE=${REPORT_GENERATOR_PATH}/latex/simple_report.template
 OUTPUT_REPORTS_FOLDER=$REPORT_GENERATOR_PATH/REPORTS
 
 mkdir -p ${OUTPUT_REPORTS_FOLDER}/$1
-cp $2 ${OUTPUT_REPORTS_FOLDER}/$1
+cp $2 ${OUTPUT_REPORTS_FOLDER}/$1/report_generator_config.ini
 cd ${OUTPUT_REPORTS_FOLDER}/$1
 
 echo "Generating report for experiment $1"

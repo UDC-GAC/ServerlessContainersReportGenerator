@@ -50,6 +50,7 @@ class BDWatchdog:
                     eprint(r.text)
                     return []
             else:
+                eprint("Error with request {0}".format(json.dumps(query)))
                 r.raise_for_status()
         except requests.ConnectionError as e:
             tries -= 1
@@ -145,4 +146,6 @@ class BDWatchdog:
                 usages[metric]["MAX"] = max_value
                 usages[metric]["MIN"] = min_value
                 usages[metric]["DIFF_MAX_MIN"] = usages[metric]["MAX"] - usages[metric]["MIN"]
+                usages[metric]["FIRST"] = points[0][1]
+                usages[metric]["LAST"] = points[-1][1]
         return usages

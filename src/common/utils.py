@@ -32,7 +32,103 @@ from src.common.config import OpenTSDBConfig, eprint
 # initialize the OpenTSDB handler
 bdw = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
-# Get the config
+
+def get_plots_metrics():
+    plots = dict()
+
+    plots["user"] = dict()
+    plots["user"]["greedy"] = {}
+    plots["user"]["conservative"] = {}
+    plots["user"]["greedy-nodebt"] = {}
+
+    plots["user"]["greedy"]["accounting"] = [('user.accounting.coins', 'user'), ('user.accounting.max_debt', 'user')]
+    plots["user"]["conservative"]["accounting"] = [('user.accounting.coins', 'user'), ('user.accounting.max_debt', 'user'),
+                                                ('user.accounting.min_balance', 'user')]
+    plots["user"]["greedy-nodebt"]["accounting"] = [('user.accounting.coins', 'user')]
+
+    plots["user"]["greedy"]["tasks"] = [('bucket.tasks.input', 'user'), ('bucket.tasks.processing', 'user')]
+    plots["user"]["conservative"]["tasks"] = [('bucket.tasks.input', 'user'), ('bucket.tasks.processing', 'user')]
+    plots["user"]["greedy-nodebt"]["tasks"] = [('bucket.tasks.input', 'user'), ('bucket.tasks.processing', 'user')]
+
+
+
+
+    plots["node"] = dict()
+    plots["node"]["greedy"] = {}
+    plots["node"]["conservative"] = {}
+    plots["node"]["greedy-nodebt"] = {}
+
+    plots["node"]["greedy"]["cpu"] = [('structure.cpu.max', 'structure'), ('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
+    plots["node"]["conservative"]["cpu"] = [('structure.cpu.max', 'structure'), ('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
+    plots["node"]["greedy-nodebt"]["cpu"] = [('structure.cpu.max', 'structure'), ('structure.cpu.current', 'structure'),
+                                            ('structure.cpu.used', 'structure')]
+
+    return plots
+
+# def get_plots_metrics():
+#     plots = dict()
+#     plots["user"] = dict()
+#
+#     plots["user"]["untreated"] = {"cpu": [], "accounting": [], "energy": []}
+#     plots["user"]["energy"] = {"cpu": [], "energy": []}
+#     plots["user"]["serverless"] = {"cpu": [], "accounting": [], "energy": []}
+#
+#     plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
+#     plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
+#     plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
+#
+#     plots["user"]["untreated"]["accounting"] = [('user.accounting.coins', 'user'), ('user.accounting.max_debt', 'user'),
+#                                                 ('user.accounting.min_balance', 'user')]
+#     plots["user"]["serverless"]["accounting"] = plots["user"]["untreated"]["accounting"]
+#
+#     plots["user"]["untreated"]["tasks"] = [('bucket.tasks.input', 'user'), ('bucket.tasks.processing', 'user')]
+#     plots["user"]["serverless"]["tasks"] = plots["user"]["untreated"]["tasks"]
+#
+#     plots["user"]["untreated"]["energy"] = [('user.energy.max', 'user'), ('user.energy.used', 'user')]
+#     plots["user"]["serverless"]["energy"] = plots["user"]["untreated"]["energy"]
+#     plots["user"]["energy"]["energy"] = plots["user"]["untreated"]["energy"]
+#
+#     plots["app"] = dict()
+#
+#     plots["app"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+#     plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+#     plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
+#
+#     plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
+#     plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
+#     plots["app"]["energy"]["cpu"] = plots["app"]["untreated"]["cpu"]
+#
+#     plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
+#     plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
+#     plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
+#
+#     plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
+#     plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
+#     plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
+#     plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
+#
+#     plots["node"] = dict()
+#     plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+#     plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
+#     plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
+#     plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
+#
+#     plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
+#     plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure'),
+#                                           ('limit.cpu.lower', 'structure'), ('limit.cpu.upper', 'structure')]
+#     plots["node"]["energy"]["cpu"] = plots["node"]["untreated"]["cpu"]
+#
+#     plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
+#     # ('proc.mem.resident', 'host')]
+#     plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure'),
+#                                           ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
+#     # ('proc.mem.resident', 'host'),
+#     plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
+#
+#     plots["node"]["energy"]["energy"] = [('structure.energy.used', 'structure')]
+#
+#     return plots
+
 
 # Generate the resource information
 def generate_resources_timeseries(document, cfg):
@@ -49,8 +145,12 @@ def generate_resources_timeseries(document, cfg):
     document["timeseries"] = dict()
     doc_timeseries = document["timeseries"]
     for node_name in cfg.NODES_LIST:
-        doc_timeseries[node_name] = bdw.get_timeseries(
-            node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS, downsample=cfg.DOWNSAMPLE)
+        ts = bdw.get_timeseries(node_name, start, end, cfg.BDWATCHDOG_NODE_METRICS, downsample=cfg.DOWNSAMPLE)
+        if not ts:
+            eprint("Could not retrieve any timeseries for node {0}".format(node_name))
+        else:
+            eprint("Retrieved ts {0} for node {1}".format(ts.keys(), node_name))
+            doc_timeseries[node_name] = ts
 
     # Generate the aggregations of the retrieved resource metrics
     document["aggregates"] = dict()
@@ -96,7 +196,8 @@ def generate_resources_timeseries(document, cfg):
             # Add up to create the SUM
             sum = 0
             for metric in metrics_to_aggregate:
-                sum += aggregates[metric]["SUM"]
+                if metric in aggregates:
+                    sum += aggregates[metric]["SUM"]
             aggregates[usage_metric]["SUM"] = sum
 
             # Create the AVG from the SUM
@@ -142,13 +243,28 @@ def generate_resources_timeseries(document, cfg):
                 metric_global_aggregates[aggregation] += node_agg_metric[aggregation]
 
     for app in cfg.APPS_LIST:
-        doc_timeseries[app] = bdw.get_timeseries(app, start, end, cfg.BDWATCHDOG_APP_METRICS, downsample=cfg.DOWNSAMPLE)
+        ts = bdw.get_timeseries(app, start, end, cfg.BDWATCHDOG_APP_METRICS, downsample=cfg.DOWNSAMPLE)
+        if ts:
+            eprint("Retrieved ts {0} for app {1}".format(ts.keys(), app))
+        doc_timeseries[app] = ts
         doc_aggregates[app] = bdw.aggregate_metrics(start, end, doc_timeseries[app])
 
     for user in cfg.USERS_LIST:
-        doc_timeseries[user] = bdw.get_timeseries(user, start, end, cfg.BDWATCHDOG_USER_METRICS,
-                                                  downsample=cfg.DOWNSAMPLE)
+        ts = bdw.get_timeseries(user, start, end, cfg.BDWATCHDOG_USER_METRICS, downsample=cfg.DOWNSAMPLE)
+        if ts:
+            eprint("Retrieved ts {0} for user {1}".format(ts.keys(), user))
+        doc_timeseries[user] = ts
+
+        # Fix for buckets
+        bucket_ts = [m for m in cfg.BDWATCHDOG_USER_METRICS if m[0].startswith("bucket.")]
+        if "tasks" in cfg.REPORTED_RESOURCES:
+            ts = bdw.get_timeseries(cfg.BUCKET, start, end, bucket_ts, downsample=cfg.DOWNSAMPLE)
+            for k, v in ts.items():
+                doc_timeseries[user][k] = v
+        ############
+
         doc_aggregates[user] = bdw.aggregate_metrics(start, end, doc_timeseries[user])
+
 
     # This metric is manually added because container structures do not have it, only application structures
     if "energy" in cfg.REPORTED_RESOURCES:
@@ -157,11 +273,9 @@ def generate_resources_timeseries(document, cfg):
         for app in cfg.APPS_LIST:
             for time_point in doc_timeseries[app]["structure.energy.max"]:
                 try:
-                    doc_timeseries["ALL"]["structure.energy.max"][time_point] += \
-                        doc_timeseries[app]["structure.energy.max"][time_point]
+                    doc_timeseries["ALL"]["structure.energy.max"][time_point] += doc_timeseries[app]["structure.energy.max"][time_point]
                 except KeyError:
-                    doc_timeseries["ALL"]["structure.energy.max"][time_point] = \
-                        doc_timeseries[app]["structure.energy.max"][time_point]
+                    doc_timeseries["ALL"]["structure.energy.max"][time_point] = doc_timeseries[app]["structure.energy.max"][time_point]
 
             doc_aggregates["ALL"]["structure.energy.max"]["SUM"] += doc_aggregates[app]["structure.energy.max"]["SUM"]
             doc_aggregates["ALL"]["structure.energy.max"]["AVG"] += doc_aggregates[app]["structure.energy.max"]["AVG"]
@@ -180,67 +294,6 @@ def generate_duration(document):
 
 def create_output_directory(figure_filepath_directory):
     pathlib.Path(figure_filepath_directory).mkdir(parents=True, exist_ok=True)
-
-
-def get_plots():
-    plots = dict()
-    plots["user"] = dict()
-
-    plots["user"]["untreated"] = {"cpu": [], "energy": []}
-    plots["user"]["serverless"] = {"cpu": [], "energy": []}
-    plots["user"]["energy"] = {"cpu": [], "energy": []}
-
-    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
-    plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
-    plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
-
-    plots["user"]["untreated"]["energy"] = [('user.energy.max', 'user'), ('user.energy.used', 'user')]
-    plots["user"]["serverless"]["energy"] = plots["user"]["untreated"]["energy"]
-    plots["user"]["energy"]["energy"] = plots["user"]["untreated"]["energy"]
-
-    plots["app"] = dict()
-
-    plots["app"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
-    plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
-
-    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
-    plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
-    plots["app"]["energy"]["cpu"] = plots["app"]["untreated"]["cpu"]
-
-    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
-    plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
-    plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
-
-    plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
-    plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
-    plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
-    plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
-
-    plots["node"] = dict()
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
-
-    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')
-                                         # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host')
-                                         ]
-    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure'),
-                                          # ('proc.cpu.user', 'host'),('proc.cpu.kernel', 'host'),
-                                          ('limit.cpu.lower', 'structure'), ('limit.cpu.upper', 'structure')]
-    plots["node"]["energy"]["cpu"] = plots["node"]["untreated"]["cpu"]
-
-    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
-    # ('proc.mem.resident', 'host')]
-    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure'),
-                                          ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
-    # ('proc.mem.resident', 'host'),
-    plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
-
-    plots["node"]["energy"]["energy"] = [('structure.energy.used', 'structure')]
-
-    return plots
 
 
 def save_figure(figure_filepath_directory, figure_name, figure, format="svg"):
@@ -272,7 +325,7 @@ def format_metric(value, label, aggregation):
     elif label.startswith("user.accounting"):
         formatted_metric = "{0} GRC".format(number_format.format(value))
     else:
-        formatted_metric = value
+        formatted_metric = str(value)
 
     if aggregation == "AVG":
         formatted_metric += "/s"
@@ -286,68 +339,7 @@ def some_test_has_missing_aggregate_information(tests):
     return False
 
 
-def get_plots_metrics():
-    plots = dict()
-    plots["user"] = dict()
-
-    plots["user"]["untreated"] = {"cpu": [], "accounting": [], "energy": []}
-    plots["user"]["energy"] = {"cpu": [], "energy": []}
-    plots["user"]["serverless"] = {"cpu": [], "accounting": [], "energy": []}
-
-    plots["user"]["untreated"]["cpu"] = [('user.cpu.current', 'structure'), ('user.cpu.used', 'structure')]
-    plots["user"]["serverless"]["cpu"] = plots["user"]["untreated"]["cpu"]
-    plots["user"]["energy"]["cpu"] = plots["user"]["untreated"]["cpu"]
-
-    plots["user"]["untreated"]["accounting"] = [('user.accounting.coins', 'user'),('user.accounting.max_debt', 'user'),('user.accounting.min_balance', 'user')]
-    plots["user"]["serverless"]["accounting"] = plots["user"]["untreated"]["accounting"]
-
-    plots["user"]["untreated"]["energy"] = [('user.energy.max', 'user'), ('user.energy.used', 'user')]
-    plots["user"]["serverless"]["energy"] = plots["user"]["untreated"]["energy"]
-    plots["user"]["energy"]["energy"] = plots["user"]["untreated"]["energy"]
-
-    plots["app"] = dict()
-
-    plots["app"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["app"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
-    plots["app"]["energy"] = {"cpu": [], "mem": [], "energy": []}
-
-    plots["app"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
-    plots["app"]["serverless"]["cpu"] = plots["app"]["untreated"]["cpu"]
-    plots["app"]["energy"]["cpu"] = plots["app"]["untreated"]["cpu"]
-
-    plots["app"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
-    plots["app"]["serverless"]["mem"] = plots["app"]["untreated"]["mem"]
-    plots["app"]["energy"]["mem"] = plots["app"]["untreated"]["mem"]
-
-    plots["app"]["untreated"]["energy"] = [('structure.energy.max', 'structure')]
-    plots["app"]["untreated"]["energy"].append(('structure.energy.used', 'structure'))
-    plots["app"]["serverless"]["energy"] = plots["app"]["untreated"]["energy"]
-    plots["app"]["energy"]["energy"] = plots["app"]["untreated"]["energy"]
-
-    plots["node"] = dict()
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["untreated"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["serverless"] = {"cpu": [], "mem": [], "energy": []}
-    plots["node"]["energy"] = {"cpu": [], "mem": [], "energy": []}
-
-    plots["node"]["untreated"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure')]
-    plots["node"]["serverless"]["cpu"] = [('structure.cpu.current', 'structure'), ('structure.cpu.used', 'structure'),
-                                          ('limit.cpu.lower', 'structure'), ('limit.cpu.upper', 'structure')]
-    plots["node"]["energy"]["cpu"] = plots["node"]["untreated"]["cpu"]
-
-    plots["node"]["untreated"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure')]
-    # ('proc.mem.resident', 'host')]
-    plots["node"]["serverless"]["mem"] = [('structure.mem.current', 'structure'), ('structure.mem.used', 'structure'),
-                                          ('limit.mem.lower', 'structure'), ('limit.mem.upper', 'structure')]
-    # ('proc.mem.resident', 'host'),
-    plots["node"]["energy"]["mem"] = plots["node"]["untreated"]["mem"]
-
-    plots["node"]["energy"]["energy"] = [('structure.energy.used', 'structure')]
-
-    return plots
-
-
-def translate_metric(metric):
+def translate_metric(metric, test_name):
     translated_metric = list()
     metric_fields = metric.split(".")
 
@@ -355,52 +347,44 @@ def translate_metric(metric):
     resource = metric_fields[1]
     measure_kind = metric_fields[2]
 
-    if metric_type == "user":
+    if metric_type == "user" or metric_type == "structure":
         if measure_kind == "used":
-            # translated_metric.append("{0} used".format(resource))
-            translated_metric.append("Used".format(resource))
+            # return "{0} used".format(resource)
+            return "Used"
         elif measure_kind == "current":
-            # translated_metric.append("{0} allocated".format(resource))
-            translated_metric.append("Allocated".format(resource))
+            # return "{0} allocated".format(resource)
+            return "Allocated"
         elif measure_kind == "max":
-            # TODO Hotfix
             if metric == "user.energy.max":
-                translated_metric.append("Power budget".format(resource))
+                return "Power budget"
+            elif metric == "structure.cpu.max" and ".noserv" in test_name:
+                return "Reserved"
+            elif metric == "structure.cpu.max" and ".serv" in test_name:
+                return "Max allowed"
             else:
-                # translated_metric.append("{0} reserved".format(resource))
-                translated_metric.append("Reserved".format(resource))
+                return "Reserved"
         else:
             translated_metric.append(measure_kind)
-    elif metric_type == "structure":
-        if measure_kind == "used":
-            # translated_metric.append("{0} used".format(resource))
-            translated_metric.append("Used".format(resource))
-        elif measure_kind == "current":
-            # translated_metric.append("{0} allocated".format(resource))
-            translated_metric.append("Allocated".format(resource))
-        elif measure_kind == "max":
-            # TODO Hotfix
-            if metric == "structure.energy.max":
-                translated_metric.append("Power budget".format(resource))
-            else:
-                # translated_metric.append("{0} reserved".format(resource))
-                translated_metric.append("Reserved".format(resource))
-        else:
-            translated_metric.append(measure_kind)
-
     elif metric_type == "limit":
         if measure_kind == "upper":
-            translated_metric.append("upper")
+            return "Upper limit"
         elif measure_kind == "lower":
-            translated_metric.append("lower")
+            return "Lower limit"
         else:
-            translated_metric.append(measure_kind)
-        translated_metric.append("limit")
+            return measure_kind
 
     elif metric_type == "proc":
-        translated_metric.append(" ".join(metric_fields[2:]))
+        return " ".join(metric_fields[2:])
 
-    return " ".join(translated_metric).capitalize()
+    elif metric_type == "bucket":
+        if measure_kind == "input":
+            return "Pending"
+        elif measure_kind == "processing":
+            return "Running"
+    else:
+        return " ".join(metric_fields)
+
+    return metric
 
 
 def get_times_from_doc(doc):
@@ -418,8 +402,5 @@ def get_times_from_doc(doc):
 
     return start_time_string, end_time_string, duration, duration_minutes
 
-
-def nowt():
-    return time.strftime("%D %H:%M:%S", time.localtime())
 
 

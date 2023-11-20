@@ -1,12 +1,15 @@
 OVERHEAD_VALUE_SIZE = 10
-TIMESERIES_FIGURE_SIZE = (8, 2.1)
+
 LEGEND_FONTSIZE = "medium"
+
+LINE_MARK_EVERY = 15
 
 line_marker = {
     "cpu": {
         "user.cpu.current": "x",
         "user.cpu.used": "o",
         "structure.cpu.current": "x",
+        "structure.cpu.max": "x",
         "structure.cpu.used": "o",
         "limit.cpu.lower": "v",
         "limit.cpu.upper": "^",
@@ -24,6 +27,10 @@ line_marker = {
         "user.accounting.min_balance": "x",
         "user.accounting.max_debt": "x"
     },
+    "tasks": {
+        "bucket.tasks.input": "x",
+        "bucket.tasks.processing": "x"
+    },
     "energy": {
         "structure.energy.max": "x",
         "structure.energy.used": "o",
@@ -38,6 +45,7 @@ line_style = {
         "user.cpu.used": "-",
         "user.cpu.current": "-",
         "structure.cpu.current": "-",
+        "structure.cpu.max": "-",
         "structure.cpu.used": "-",
         "limit.cpu.lower": "--",
         "limit.cpu.upper": "--",
@@ -55,6 +63,10 @@ line_style = {
         "user.accounting.coins": "-",
         "user.accounting.max_debt": "-",
         "user.accounting.min_balance": "-"
+    },
+    "tasks": {
+        "bucket.tasks.input": "-",
+        "bucket.tasks.processing": "-"
     },
     "energy": {
         "structure.energy.max": "-",

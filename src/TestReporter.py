@@ -23,7 +23,6 @@
 
 from __future__ import print_function
 
-
 from src.opentsdb import bdwatchdog
 from src.common.config import OpenTSDBConfig, eprint
 from src.latex.latex_output import latex_print, print_latex_stress, flush_table, print_basic_doc_info
@@ -76,20 +75,19 @@ class TestReporter:
         max_columns = self.cfg.MAX_COLUMNS["print_test_resources"]
         headers, rows, remaining_data, num_columns = ["structure", "aggregation"], dict(), False, 0
         for metric_name in self.cfg.PRINTED_METRICS:
-            headers.append(translate_metric(metric_name))
+            headers.append(translate_metric(metric_name, test["test_name"]))
             for structure_name in structures_list:
 
                 # Initialize
                 if structure_name not in rows:
                     rows[structure_name] = dict()
 
-                for agg in ["SUM", "AVG", "MAX", "MIN", "DIFF_MAX_MIN"]:
+                for agg in ["SUM", "AVG", "MAX", "MIN", "DIFF_MAX_MIN", "FIRST", "LAST"]:
                     if agg not in rows[structure_name]:
                         rows[structure_name][agg] = [structure_name, agg]
 
                     try:
-                        rows[structure_name][agg].append(
-                            format_metric(test["aggregates"][structure_name][metric_name][agg], metric_name, agg))
+                        rows[structure_name][agg].append(format_metric(test["aggregates"][structure_name][metric_name][agg], metric_name, agg))
                     except KeyError:
                         rows[structure_name][agg].append("n/a")
 
@@ -221,7 +219,7 @@ class TestReporter:
 
                 for agg in ["SUM", "AVG"]:
                     if agg not in rows[resource]:
-                        rows[resource][agg] = [translate_metric(resource), agg]
+                        rows[resource][agg] = [translate_metric(resource, test["test_name"]), agg]
 
                     if test["aggregates"] == "n/a":
                         rows[resource][agg].append("n/a")
