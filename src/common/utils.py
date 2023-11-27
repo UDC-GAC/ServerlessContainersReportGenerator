@@ -347,6 +347,8 @@ def translate_metric(metric, test_name):
     resource = metric_fields[1]
     measure_kind = metric_fields[2]
 
+    default = " ".join(metric_fields)
+
     if metric_type == "user" or metric_type == "structure":
         if measure_kind == "used":
             # return "{0} used".format(resource)
@@ -363,8 +365,18 @@ def translate_metric(metric, test_name):
                 return "Max allowed"
             else:
                 return "Reserved"
+        elif resource == "accounting":
+            if measure_kind == "coins":
+                return "Balance"
+            elif measure_kind == "max_debt":
+                return "Max allowed debt"
+            elif measure_kind == "min_balance":
+                return "Minimum balance"
+            else:
+                return default
         else:
             translated_metric.append(measure_kind)
+
     elif metric_type == "limit":
         if measure_kind == "upper":
             return "Upper limit"
@@ -382,9 +394,7 @@ def translate_metric(metric, test_name):
         elif measure_kind == "processing":
             return "Running"
     else:
-        return " ".join(metric_fields)
-
-    return metric
+        return default
 
 
 def get_times_from_doc(doc):

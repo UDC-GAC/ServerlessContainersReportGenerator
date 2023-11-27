@@ -2,15 +2,14 @@ OVERHEAD_VALUE_SIZE = 10
 
 LEGEND_FONTSIZE = "medium"
 
-LINE_MARK_EVERY = 15
 
 line_marker = {
     "cpu": {
         "user.cpu.current": "x",
-        "user.cpu.used": "o",
-        "structure.cpu.current": "x",
-        "structure.cpu.max": "x",
-        "structure.cpu.used": "o",
+        "user.cpu.used": "",
+        "structure.cpu.current": "o",
+        "structure.cpu.max": "d",
+        "structure.cpu.used": "",
         "limit.cpu.lower": "v",
         "limit.cpu.upper": "^",
         "proc.cpu.user": "*",
@@ -23,12 +22,12 @@ line_marker = {
         "proc.mem.resident": "o"
     },
     "accounting": {
-        "user.accounting.coins": "x",
-        "user.accounting.min_balance": "x",
+        "user.accounting.coins": "",
+        "user.accounting.min_balance": "v",
         "user.accounting.max_debt": "x"
     },
     "tasks": {
-        "bucket.tasks.input": "x",
+        "bucket.tasks.input": "o",
         "bucket.tasks.processing": "x"
     },
     "energy": {

@@ -72,7 +72,9 @@ class ExperimentReporter:
 
         # Dump the raw data (e.g., aggregates), aside from the original timeseries
         for t in processed_tests:
+            # Make a copy of the data
             dumped_test = t.copy()
+            # Remove the original timeseries
             del dumped_test["timeseries"]
             with open('{0}.json'.format(t["test_name"]), 'w') as fp:
                 json.dump(dumped_test, fp, indent=2)

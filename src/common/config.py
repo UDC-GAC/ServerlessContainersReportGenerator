@@ -133,6 +133,9 @@ class Config:
         "YLIM",
         "YMIN",
         "XTICKS_STEP",
+        "YTICKS_STEP",
+        "LINE_MARK_EVERY",
+        "SINGLE_PLOT_WITH_XLABEL",
         "FIGURE_SIZE_X",
         "FIGURE_SIZE_Y",
         "REPORTED_RESOURCES",
@@ -159,6 +162,9 @@ class Config:
         "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20,tasks:default:20",
         "YMIN": "cpu:default:0,mem:default:0,accounting:default:0,tasks:default:0",
         "XTICKS_STEP": 50,
+        "YTICKS_STEP": 10,
+        "LINE_MARK_EVERY": 15,
+        "SINGLE_PLOT_WITH_XLABEL": "",
         "FIGURE_SIZE_X" : 8,
         "FIGURE_SIZE_Y": 3,
         "REPORTED_RESOURCES": "cpu",
@@ -189,7 +195,7 @@ class Config:
         config_file_path = os.path.join(self.__base_path, self.__config_path)
         success = config.read(config_file_path)
         if not success:
-            eprint('Config file does not exist or is not accessible, will use default values', "blue")
+            eprint('Config file does not exist or is not accessible, will use default values')
 
         for key in self.__config_keys:
             try:
@@ -313,24 +319,37 @@ class Config:
         self.YLIM = dict()
         for pair in parse_val_list(ENV["YLIM"]):
             resource, structure_name, limit = pair.split(":")
+            if structure_name not in self.YLIM:
+                self.YLIM[structure_name] = dict()
             try:
-                if structure_name not in self.YLIM:
-                    self.YLIM[structure_name] = dict()
-                self.YLIM[structure_name][resource] = int(limit)
+                self.YLIM[structure_name][resource] = float(limit)
             except ValueError:
                 pass
 
         self.YMIN = dict()
         for pair in parse_val_list(ENV["YMIN"]):
             resource, structure_name, limit = pair.split(":")
+            if structure_name not in self.YMIN:
+                self.YMIN[structure_name] = dict()
             try:
-                if structure_name not in self.YMIN:
-                    self.YMIN[structure_name] = dict()
-                self.YMIN[structure_name][resource] = int(limit)
+                self.YMIN[structure_name][resource] = float(limit)
+            except ValueError:
+                pass
+
+        self.YTICKS_STEP = dict()
+        for pair in parse_val_list(ENV["YTICKS_STEP"]):
+            resource, limit = pair.split(":")
+            if resource not in self.YMIN:
+                self.YTICKS_STEP[resource] = dict()
+            try:
+                self.YTICKS_STEP[resource] = float(limit)
             except ValueError:
                 pass
 
         self.XTICKS_STEP = self.get_int_value(ENV, "XTICKS_STEP")
+        self.LINE_MARK_EVERY = self.get_int_value(ENV, "LINE_MARK_EVERY")
+
+        self.SINGLE_PLOT_WITH_XLABEL = strip_quotes(ENV["SINGLE_PLOT_WITH_XLABEL"])
 
         self.FIGURE_SIZE_X = self.get_float_value(ENV, "FIGURE_SIZE_X")
         self.FIGURE_SIZE_Y = self.get_float_value(ENV, "FIGURE_SIZE_Y")

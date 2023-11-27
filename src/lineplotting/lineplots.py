@@ -26,9 +26,10 @@ import math
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 from src.opentsdb import bdwatchdog
-from src.lineplotting.style import line_style, dashes_dict, line_marker, LEGEND_FONTSIZE, LINE_MARK_EVERY
+from src.lineplotting.style import line_style, dashes_dict, line_marker, LEGEND_FONTSIZE
 from src.common.config import OpenTSDBConfig, eprint
 from src.common.utils import translate_metric, save_figure
 
@@ -61,7 +62,6 @@ def plot_test_doc(test, doc_name, plots, cfg):
     start_time, end_time = test["start_time"], test["end_time"]
     test_name = test["test_name"]
     doc_ts = test["timeseries"][doc_name]
-
     for resource in plots:
         if resource not in cfg.REPORTED_RESOURCES:
             continue
@@ -78,9 +78,6 @@ def plot_test_doc(test, doc_name, plots, cfg):
             eprint("In test '{0}' plot '{1}' for doc '{2}' has no data, skipping".format(test_name, resource, doc_name))
             continue
 
-        fig = plt.figure(figsize=(cfg.FIGURE_SIZE_X, cfg.FIGURE_SIZE_Y))
-        ax1 = fig.add_subplot(111)
-
         # Values used for setting the X and Y limits, without depending on actual time series values ####
         if cfg.STATIC_LIMITS:
             if doc_name not in cfg.XLIM:
@@ -95,11 +92,27 @@ def plot_test_doc(test, doc_name, plots, cfg):
                 min_y_ts_point_value = cfg.YMIN[doc_name][resource]
         else:
             max_y_ts_point_value, max_x_ts_point_value = 0, 0
+            min_y_ts_point_value = 0
+
+        size_y = cfg.FIGURE_SIZE_Y
+        if cfg.SINGLE_PLOT_WITH_XLABEL:
+            if resource == cfg.SINGLE_PLOT_WITH_XLABEL:
+                size_y *= 1.1
+
+        fig = plt.figure(figsize=(cfg.FIGURE_SIZE_X, size_y))
+        ax1 = fig.add_subplot(111)
 
         ###########################################################
 
         for metric in plots[resource]:
             metric_name = metric[0]
+            line_color = None
+
+            # Hack to avoid plotting current and reserved in a non-serverless scenario
+            if metric_name == "structure.cpu.current" and test_name == "4.noserv_noacct":
+                continue
+            elif metric_name == "structure.cpu.used" and test_name == "4.noserv_noacct":
+                line_color = "tab:green"
 
             # Get the time series data
             if metric_name not in doc_ts or not doc_ts[metric_name]:
@@ -131,8 +144,9 @@ def plot_test_doc(test, doc_name, plots, cfg):
                      linestyle=linestyle,
                      dashes=dashes_dict[linestyle],
                      marker=line_marker[resource][metric_name],
-                     markersize=5,
-                     markevery=LINE_MARK_EVERY
+                     markersize=6,
+                     markevery=cfg.LINE_MARK_EVERY,
+                     color=line_color
                      )
 
         # Set x and y limits
@@ -144,6 +158,8 @@ def plot_test_doc(test, doc_name, plots, cfg):
             top = math.ceil(top * cfg.Y_AMPLIFICATION_FACTOR)
             bottom -= abs(math.floor(bottom * (cfg.Y_AMPLIFICATION_FACTOR-1)))
 
+        eprint((resource, top, bottom, left, right))
+
         plt.xlim(left=left, right=right)
         plt.ylim(top=top, bottom=bottom)
 
@@ -153,7 +169,12 @@ def plot_test_doc(test, doc_name, plots, cfg):
             # ax1.axvline(linewidth=1, color="k")
 
         # Set properties to the whole plot
-        plt.xlabel('Time(s)', fontsize=11)
+        if cfg.SINGLE_PLOT_WITH_XLABEL:
+            if resource == cfg.SINGLE_PLOT_WITH_XLABEL:
+                plt.xlabel('Time(s)', fontsize=12)
+        else:
+            plt.xlabel('Time(s)', fontsize=12)
+
         plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
         plt.title('')
         plt.grid(True)
@@ -164,10 +185,28 @@ def plot_test_doc(test, doc_name, plots, cfg):
                    facecolor='#afeeee',
                    labelspacing=0.15,
                    handletextpad=0.18,
-                   borderpad=0.22)
+                   borderpad=0.22,
+                   framealpha=1)
+
+        if test_name == "2.serv_noacct" and resource == "cpu":
+            plt.legend(loc='upper left',
+                       shadow=False,
+                       fontsize=LEGEND_FONTSIZE,
+                       fancybox=True,
+                       facecolor='#afeeee',
+                       labelspacing=0.15,
+                       handletextpad=0.18,
+                       borderpad=0.22,
+                       framealpha=1)
+
+        # if resource == "cpu":
+        #     plt.axvline(x=4080, ymin=0.05, ymax=0.95, color='red', label='axvline - % of full height')
+
+        ax1.yaxis.set_major_formatter(FormatStrFormatter("%5d"))
 
         if cfg.STATIC_LIMITS:
             plt.xticks(np.arange(0, right, step=cfg.XTICKS_STEP))
+            plt.yticks(np.arange(math.ceil(bottom), math.ceil(top), step=cfg.YTICKS_STEP[resource]))
         else:
             # May be inaccurate up to +- 'downsample' seconds,
             # because the data may start a little after the specified 'start' time or end
