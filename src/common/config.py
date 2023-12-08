@@ -136,6 +136,7 @@ class Config:
         "YTICKS_STEP",
         "LINE_MARK_EVERY",
         "SINGLE_PLOT_WITH_XLABEL",
+        "SPLIT_LINEPLOTS_WHEN_TIME_GAPS",
         "FIGURE_SIZE_X",
         "FIGURE_SIZE_Y",
         "REPORTED_RESOURCES",
@@ -165,6 +166,7 @@ class Config:
         "YTICKS_STEP": 10,
         "LINE_MARK_EVERY": 15,
         "SINGLE_PLOT_WITH_XLABEL": "",
+        "SPLIT_LINEPLOTS_WHEN_TIME_GAPS": "true",
         "FIGURE_SIZE_X" : 8,
         "FIGURE_SIZE_Y": 3,
         "REPORTED_RESOURCES": "cpu",
@@ -350,6 +352,8 @@ class Config:
         self.LINE_MARK_EVERY = self.get_int_value(ENV, "LINE_MARK_EVERY")
 
         self.SINGLE_PLOT_WITH_XLABEL = strip_quotes(ENV["SINGLE_PLOT_WITH_XLABEL"])
+
+        self.SPLIT_LINEPLOTS_WHEN_TIME_GAPS = ENV["SPLIT_LINEPLOTS_WHEN_TIME_GAPS"] == "true"
 
         self.FIGURE_SIZE_X = self.get_float_value(ENV, "FIGURE_SIZE_X")
         self.FIGURE_SIZE_Y = self.get_float_value(ENV, "FIGURE_SIZE_Y")

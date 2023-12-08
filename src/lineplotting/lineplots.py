@@ -27,6 +27,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+from numpy import NaN
 
 from src.opentsdb import bdwatchdog
 from src.lineplotting.style import line_style, dashes_dict, line_marker, LEGEND_FONTSIZE
@@ -35,6 +36,7 @@ from src.common.utils import translate_metric, save_figure
 
 # initialize the OpenTSDB handler
 bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
+
 
 def translate_plot_name_to_ylabel(plot_name):
     if plot_name == "cpu":
@@ -50,12 +52,13 @@ def translate_plot_name_to_ylabel(plot_name):
     else:
         return plot_name
 
+
 def rebase_ts_values(resource, timeseries):
     if resource == "mem":
         # Translate from MiB to GiB
         return list(map(lambda point: int(point / 1024), timeseries.values()))
     else:
-        return timeseries.values()
+        return list(timeseries.values())
 
 
 def plot_test_doc(test, doc_name, plots, cfg):
@@ -126,10 +129,29 @@ def plot_test_doc(test, doc_name, plots, cfg):
 
             # Convert the time stamps to times relative to 0 (basetime)
             basetime = int(list(timeseries.keys())[0])
+
+            ## HOTFIX for transcoding basic experiments
+            if cfg.SPLIT_LINEPLOTS_WHEN_TIME_GAPS: #resource == "cpu":
+                t = basetime
+                splits = list()
+                for k, v in timeseries.items():
+                    if int(k) - t > 20:
+                        eprint((k, v, int(k), basetime))
+                        splits.append(int(k) - 5)
+                        splits.append(t + 5)
+                    t = int(k)
+                for s in splits:
+                    timeseries[str(s)] = np.nan
+
             x = list(map(lambda point: int(point) - basetime, timeseries))
 
             # Get the time series points and rebase them if necessary
             y = rebase_ts_values(resource, timeseries)
+
+            data = zip(x, y)
+            data = sorted(data)
+            x = [p[0] for p in data]
+            y = [p[1] for p in data]
 
             # Set the maximum and minimum time series time and value points
             max_y_ts_point_value = max(max_y_ts_point_value, max(y))
@@ -156,14 +178,14 @@ def plot_test_doc(test, doc_name, plots, cfg):
         # If not static limits apply an amplification factor or the max timeseries value will be at the plot "ceiling"
         if not cfg.STATIC_LIMITS:
             top = math.ceil(top * cfg.Y_AMPLIFICATION_FACTOR)
-            bottom -= abs(math.floor(bottom * (cfg.Y_AMPLIFICATION_FACTOR-1)))
+            bottom -= abs(math.floor(bottom * (cfg.Y_AMPLIFICATION_FACTOR - 1)))
 
         eprint((resource, top, bottom, left, right))
 
         plt.xlim(left=left, right=right)
         plt.ylim(top=top, bottom=bottom)
 
-        if bottom < 0:
+        if bottom < 0 and resource == "accounting":
             # Make the 0 line thicker
             ax1.axhline(linewidth=1.5, color="red")
             # ax1.axvline(linewidth=1, color="k")
@@ -188,6 +210,7 @@ def plot_test_doc(test, doc_name, plots, cfg):
                    borderpad=0.22,
                    framealpha=1)
 
+        # HOTFIX
         if test_name == "2.serv_noacct" and resource == "cpu":
             plt.legend(loc='upper left',
                        shadow=False,
