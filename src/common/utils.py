@@ -371,7 +371,7 @@ def translate_metric(metric, test_name):
             elif measure_kind == "max_debt":
                 return "Max allowed debt"
             elif measure_kind == "min_balance":
-                return "Minimum balance"
+                return "Task cost threshold"
             else:
                 return default
         else:
