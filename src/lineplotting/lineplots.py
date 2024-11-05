@@ -40,7 +40,7 @@ bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
 def translate_plot_name_to_ylabel(plot_name):
     if plot_name == "cpu":
-        return "CPU (shares)"
+        return "CPU"
     elif plot_name == "mem":
         return "Memory (GiB)"
     elif plot_name == "accounting":
@@ -62,6 +62,15 @@ def rebase_ts_values(resource, timeseries):
 
 
 def plot_test_doc(test, doc_name, plots, cfg):
+    def add_xticks():
+        if cfg.STATIC_LIMITS:
+            plt.xticks(np.arange(0, right, step=cfg.XTICKS_STEP))
+        else:
+            # May be inaccurate up to +- 'downsample' seconds,
+            # because the data may start a little after the specified 'start' time or end
+            # a little before the specified 'end' time
+            plt.xticks(np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP))
+
     start_time, end_time = test["start_time"], test["end_time"]
     test_name = test["test_name"]
     doc_ts = test["timeseries"][doc_name]
@@ -130,8 +139,9 @@ def plot_test_doc(test, doc_name, plots, cfg):
             # Convert the time stamps to times relative to 0 (basetime)
             basetime = int(list(timeseries.keys())[0])
 
-            ## HOTFIX for transcoding basic experiments
-            if cfg.SPLIT_LINEPLOTS_WHEN_TIME_GAPS: #resource == "cpu":
+            ########### HOTFIX ################
+            ## For transcoding basic experiments for the Blockchain serverless paper
+            if cfg.SPLIT_LINEPLOTS_WHEN_TIME_GAPS:  # resource == "cpu":
                 t = basetime
                 splits = list()
                 for k, v in timeseries.items():
@@ -142,6 +152,7 @@ def plot_test_doc(test, doc_name, plots, cfg):
                     t = int(k)
                 for s in splits:
                     timeseries[str(s)] = np.nan
+            ########### HOTFIX ################
 
             x = list(map(lambda point: int(point) - basetime, timeseries))
 
@@ -185,10 +196,12 @@ def plot_test_doc(test, doc_name, plots, cfg):
         plt.xlim(left=left, right=right)
         plt.ylim(top=top, bottom=bottom)
 
+        ########### HOTFIX ################
         if bottom < 0 and resource == "accounting":
             # Make the 0 line thicker
             ax1.axhline(linewidth=1.5, color="red")
             # ax1.axvline(linewidth=1, color="k")
+        ########### HOTFIX ################
 
         # Set properties to the whole plot
         if cfg.SINGLE_PLOT_WITH_XLABEL:
@@ -210,7 +223,8 @@ def plot_test_doc(test, doc_name, plots, cfg):
                    borderpad=0.22,
                    framealpha=1)
 
-        # HOTFIX
+        ########### HOTFIX ################
+        ## For transcoding basic experiments for the Blockchain serverless paper
         if test_name == "2.serv_noacct" and resource == "cpu":
             plt.legend(loc='upper left',
                        shadow=False,
@@ -221,29 +235,44 @@ def plot_test_doc(test, doc_name, plots, cfg):
                        handletextpad=0.18,
                        borderpad=0.22,
                        framealpha=1)
+        ########### HOTFIX ################
 
         # if resource == "cpu":
         #     plt.axvline(x=4080, ymin=0.05, ymax=0.95, color='red', label='axvline - % of full height')
 
         ax1.yaxis.set_major_formatter(FormatStrFormatter("%5d"))
 
+        # ADD YTICKS
         if cfg.STATIC_LIMITS:
-            plt.xticks(np.arange(0, right, step=cfg.XTICKS_STEP))
             plt.yticks(np.arange(math.ceil(bottom), math.ceil(top), step=cfg.YTICKS_STEP[resource]))
-        else:
-            # May be inaccurate up to +- 'downsample' seconds,
-            # because the data may start a little after the specified 'start' time or end
-            # a little before the specified 'end' time
-            plt.xticks(np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP))
+
+        # ADD XTICKS
+        PAD_INCHES = 0
+        add_xticks()
+        if cfg.SINGLE_PLOT_WITH_XTICKS:
+            if resource != cfg.SINGLE_PLOT_WITH_XLABEL:
+                # Hide the xticks labels, keep the lines
+                for tick in ax1.xaxis.get_major_ticks():
+                    tick.tick1line.set_visible(True)
+                    tick.label1.set_visible(False)
+                # Add a small pad, otherwise matplotlib trims the plots' black box from the right side
+                PAD_INCHES = 0.085
+            else:
+                # Add small pad as otherwise matplotlib might trim some letters on the left side
+                PAD_INCHES = 0.027
+
+        # Tweak this parameter to position the ylabel closer or farther from the yticks
+        # This indirectly affects the size and thus, allows to align several different plot resources in column in Latex
+        ax1.yaxis.set_label_coords(cfg.RESOURCE_X_LABELSEP[resource], 0.5)
 
         # Save the plots
         figure_filepath_directory = "{0}/{1}".format("timeseries_plots", test_name)
         if "svg" in cfg.PLOTTING_FORMATS:
             figure_name = "{0}_{1}.{2}".format(doc_name, resource, "svg")
-            save_figure(figure_filepath_directory, figure_name, fig, format="svg")
+            save_figure(figure_filepath_directory, figure_name, fig, format="svg", pad_inches=PAD_INCHES)
 
         if "png" in cfg.PLOTTING_FORMATS:
             figure_name = "{0}_{1}.{2}".format(doc_name, resource, "png")
-            save_figure(figure_filepath_directory, figure_name, fig, format="png")
+            save_figure(figure_filepath_directory, figure_name, fig, format="png", pad_inches=PAD_INCHES)
 
         plt.close()

@@ -132,10 +132,12 @@ class Config:
         "XLIM",
         "YLIM",
         "YMIN",
+        "RESOURCE_X_LABELSEP",
         "XTICKS_STEP",
         "YTICKS_STEP",
         "LINE_MARK_EVERY",
         "SINGLE_PLOT_WITH_XLABEL",
+        "SINGLE_PLOT_WITH_XTICKS",
         "SPLIT_LINEPLOTS_WHEN_TIME_GAPS",
         "FIGURE_SIZE_X",
         "FIGURE_SIZE_Y",
@@ -162,10 +164,12 @@ class Config:
         "XLIM": "default:1000",
         "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20,tasks:default:20",
         "YMIN": "cpu:default:0,mem:default:0,accounting:default:0,tasks:default:0",
+        "RESOURCE_X_LABELSEP": "cpu:0,accounting:0,tasks:0",
         "XTICKS_STEP": 50,
         "YTICKS_STEP": 10,
         "LINE_MARK_EVERY": 15,
         "SINGLE_PLOT_WITH_XLABEL": "",
+        "SINGLE_PLOT_WITH_XTICKS": "",
         "SPLIT_LINEPLOTS_WHEN_TIME_GAPS": "true",
         "FIGURE_SIZE_X" : 8,
         "FIGURE_SIZE_Y": 3,
@@ -338,6 +342,15 @@ class Config:
             except ValueError:
                 pass
 
+        self.RESOURCE_X_LABELSEP = dict()
+        for pair in parse_val_list(ENV["RESOURCE_X_LABELSEP"]):
+            resource, value = pair.split(":")
+            try:
+                if resource not in self.RESOURCE_X_LABELSEP:
+                    self.RESOURCE_X_LABELSEP[resource] = float(value)
+            except ValueError:
+                pass
+
         self.YTICKS_STEP = dict()
         for pair in parse_val_list(ENV["YTICKS_STEP"]):
             resource, limit = pair.split(":")
@@ -352,6 +365,7 @@ class Config:
         self.LINE_MARK_EVERY = self.get_int_value(ENV, "LINE_MARK_EVERY")
 
         self.SINGLE_PLOT_WITH_XLABEL = strip_quotes(ENV["SINGLE_PLOT_WITH_XLABEL"])
+        self.SINGLE_PLOT_WITH_XTICKS = strip_quotes(ENV["SINGLE_PLOT_WITH_XTICKS"])
 
         self.SPLIT_LINEPLOTS_WHEN_TIME_GAPS = ENV["SPLIT_LINEPLOTS_WHEN_TIME_GAPS"] == "true"
 

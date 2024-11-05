@@ -296,12 +296,11 @@ def create_output_directory(figure_filepath_directory):
     pathlib.Path(figure_filepath_directory).mkdir(parents=True, exist_ok=True)
 
 
-def save_figure(figure_filepath_directory, figure_name, figure, format="svg"):
+def save_figure(figure_filepath_directory, figure_name, figure, format="svg", pad_inches=0):
     figure_filepath = "{0}/{1}".format(figure_filepath_directory, figure_name)
     create_output_directory(figure_filepath_directory)
     # figure.savefig(figure_filepath, transparent=True, bbox_inches='tight', pad_inches=0, format=format)
-    # figure.savefig(figure_filepath, transparent=True, bbox_inches='tight', pad_inches=0, format=format)
-    figure.savefig(figure_filepath, bbox_inches='tight', pad_inches=0, format=format)
+    figure.savefig(figure_filepath, bbox_inches='tight', pad_inches=pad_inches, format=format)
 
 
 def format_metric(value, label, aggregation):
