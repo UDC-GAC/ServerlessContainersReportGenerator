@@ -64,12 +64,18 @@ def rebase_ts_values(resource, timeseries):
 def plot_test_doc(test, doc_name, plots, cfg):
     def add_xticks():
         if cfg.STATIC_LIMITS:
-            plt.xticks(np.arange(0, right, step=cfg.XTICKS_STEP))
+            ticks = np.arange(0, right, step=cfg.XTICKS_STEP)
         else:
+            ticks = np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP)
             # May be inaccurate up to +- 'downsample' seconds,
             # because the data may start a little after the specified 'start' time or end
             # a little before the specified 'end' time
-            plt.xticks(np.arange(0, int(end_time) - int(start_time), step=cfg.XTICKS_STEP))
+
+        ROTATION = 0
+        HORIZONTAL_ALIGN = "right"
+        labels = ["{0}".format(t) for t in ticks]
+        plt.xticks(ticks, labels=labels, rotation=ROTATION, ha=HORIZONTAL_ALIGN)
+
 
     start_time, end_time = test["start_time"], test["end_time"]
     test_name = test["test_name"]
@@ -210,7 +216,16 @@ def plot_test_doc(test, doc_name, plots, cfg):
         else:
             plt.xlabel('Time(s)', fontsize=12)
 
-        plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
+        if cfg.PRINT_Y_LABEL:
+            plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
+        else:
+            plt.ylabel(".", color="white") # This is so that the tweak of label space has effect
+
+        ########### HOTFIX ################
+        if "noserv_noacct" in test_name or "noserv_acct" in test_name:
+            plt.ylabel(".", color="white")  # This is so that the tweak of label space has effect
+        ########### HOTFIX ################
+
         plt.title('')
         plt.grid(True)
         plt.legend(loc='upper right',
@@ -247,7 +262,6 @@ def plot_test_doc(test, doc_name, plots, cfg):
             plt.yticks(np.arange(math.ceil(bottom), math.ceil(top), step=cfg.YTICKS_STEP[resource]))
 
         # ADD XTICKS
-        PAD_INCHES = 0
         add_xticks()
         if cfg.SINGLE_PLOT_WITH_XTICKS:
             if resource != cfg.SINGLE_PLOT_WITH_XLABEL:
@@ -255,11 +269,10 @@ def plot_test_doc(test, doc_name, plots, cfg):
                 for tick in ax1.xaxis.get_major_ticks():
                     tick.tick1line.set_visible(True)
                     tick.label1.set_visible(False)
-                # Add a small pad, otherwise matplotlib trims the plots' black box from the right side
-                PAD_INCHES = 0.085
-            else:
-                # Add small pad as otherwise matplotlib might trim some letters on the left side
-                PAD_INCHES = 0.027
+
+        # Add small pad as otherwise matplotlib might trim some letters on the left side,
+        # or the plots' black box from the right side
+        PAD_INCHES = 0.03
 
         # Tweak this parameter to position the ylabel closer or farther from the yticks
         # This indirectly affects the size and thus, allows to align several different plot resources in column in Latex

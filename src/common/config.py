@@ -133,6 +133,7 @@ class Config:
         "YLIM",
         "YMIN",
         "RESOURCE_X_LABELSEP",
+        "PRINT_Y_LABEL",
         "XTICKS_STEP",
         "YTICKS_STEP",
         "LINE_MARK_EVERY",
@@ -165,6 +166,7 @@ class Config:
         "YLIM": "cpu:default:1000,mem:default:10000,accounting:default:20,tasks:default:20",
         "YMIN": "cpu:default:0,mem:default:0,accounting:default:0,tasks:default:0",
         "RESOURCE_X_LABELSEP": "cpu:0,accounting:0,tasks:0",
+        "PRINT_Y_LABEL": "true",
         "XTICKS_STEP": 50,
         "YTICKS_STEP": 10,
         "LINE_MARK_EVERY": 15,
@@ -341,6 +343,8 @@ class Config:
                 self.YMIN[structure_name][resource] = float(limit)
             except ValueError:
                 pass
+
+        self.PRINT_Y_LABEL = ENV["PRINT_Y_LABEL"] == "true"
 
         self.RESOURCE_X_LABELSEP = dict()
         for pair in parse_val_list(ENV["RESOURCE_X_LABELSEP"]):
