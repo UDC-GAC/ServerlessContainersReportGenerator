@@ -232,7 +232,7 @@ def plot_test_doc(test, doc_name, plots, cfg):
         ########### HOTFIX ################
         handles, labels = plt.gca().get_legend_handles_labels()
         if resource == "accounting":
-            custom_order = ['Balance', 'Task cost threshold', 'Max allowed debt']
+            custom_order = ['Balance', 'Single task cost', 'Max allowed debt']
             # Get current handles and labels
             handles, labels = plt.gca().get_legend_handles_labels()
             # Build a dict to map labels to handles
