@@ -44,7 +44,7 @@ def translate_plot_name_to_ylabel(plot_name):
     elif plot_name == "mem":
         return "Memory (GiB)"
     elif plot_name == "accounting":
-        return "Accounting"
+        return "Funds" # Changed from Accounting to billing due to a concept naming change in the paper
     elif plot_name == "tasks":
         return "Tasks"
     elif plot_name == "energy":
@@ -228,7 +228,26 @@ def plot_test_doc(test, doc_name, plots, cfg):
 
         plt.title('')
         plt.grid(True)
-        plt.legend(loc='upper right',
+        
+        ########### HOTFIX ################
+        handles, labels = plt.gca().get_legend_handles_labels()
+        if resource == "accounting":
+            custom_order = ['Balance', 'Task cost threshold', 'Max allowed debt']
+            # Get current handles and labels
+            handles, labels = plt.gca().get_legend_handles_labels()
+            # Build a dict to map labels to handles
+            label_to_handle = dict(zip(labels, handles))
+            # Sort handles and labels by custom order
+            sorted_labels = [label for label in custom_order if label in label_to_handle]
+            sorted_handles = [label_to_handle[label] for label in sorted_labels]
+        else:
+            sorted_labels = labels
+            sorted_handles = handles
+        ########### HOTFIX ################
+        
+        plt.legend(sorted_handles,
+                   sorted_labels,
+                   loc='upper right',
                    shadow=False,
                    fontsize=LEGEND_FONTSIZE,
                    fancybox=True,
