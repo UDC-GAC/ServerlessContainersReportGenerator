@@ -148,4 +148,5 @@ class BDWatchdog:
                 usages[metric]["DIFF_MAX_MIN"] = usages[metric]["MAX"] - usages[metric]["MIN"]
                 usages[metric]["FIRST"] = points[0][1]
                 usages[metric]["LAST"] = points[-1][1]
+                usages[metric]["TS_DURATION"] = int(points[-1][0]) - int(points[0][0])
         return usages

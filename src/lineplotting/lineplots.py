@@ -40,11 +40,11 @@ bdwatchdog_handler = bdwatchdog.BDWatchdog(OpenTSDBConfig())
 
 def translate_plot_name_to_ylabel(plot_name):
     if plot_name == "cpu":
-        return "CPU"
+        return "CPU (shares)"
     elif plot_name == "mem":
         return "Memory (GiB)"
     elif plot_name == "accounting":
-        return "Funds" # Changed from Accounting to billing due to a concept naming change in the paper
+        return "Funds (GRC)" # Changed from Accounting to billing due to a concept naming change in the paper
     elif plot_name == "tasks":
         return "Tasks"
     elif plot_name == "energy":
@@ -212,12 +212,12 @@ def plot_test_doc(test, doc_name, plots, cfg):
         # Set properties to the whole plot
         if cfg.SINGLE_PLOT_WITH_XLABEL:
             if resource == cfg.SINGLE_PLOT_WITH_XLABEL:
-                plt.xlabel('Time(s)', fontsize=12)
+                plt.xlabel('Time (s)', fontsize=12)
         else:
-            plt.xlabel('Time(s)', fontsize=12)
+            plt.xlabel('Time (s)', fontsize=12)
 
         if cfg.PRINT_Y_LABEL:
-            plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=13)
+            plt.ylabel(translate_plot_name_to_ylabel(resource), style="italic", weight="bold", fontsize=11.75)
         else:
             plt.ylabel(".", color="white") # This is so that the tweak of label space has effect
 
@@ -279,6 +279,7 @@ def plot_test_doc(test, doc_name, plots, cfg):
         # ADD YTICKS
         if cfg.STATIC_LIMITS:
             plt.yticks(np.arange(math.ceil(bottom), math.ceil(top), step=cfg.YTICKS_STEP[resource]))
+            plt.tick_params(axis='y', pad=0.80, length=2.3)
 
         # ADD XTICKS
         add_xticks()
